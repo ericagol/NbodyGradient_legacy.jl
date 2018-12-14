@@ -1,0 +1,28 @@
+bodies      7
+bins        1,2,2,1
+
+
+# Initial condition set up for the hierarchy shown below.
+# Levels
+# 0                   ___________________________
+#                    |                           |
+# 1           _______|_______                ____|____
+#            |               |              |         |
+# 2      ____|____       ____|____          6         7
+#       |         |     |         |
+# 3   __|__       3     4         5
+#    |     |
+#    1     2
+#
+# Order your "bins" from "bottom" to "top".
+# For reference, here there is 1 binary on the bottom level (level 3), 2 on level
+# 2, etc.
+#
+# If you wish to use the terminal instead, the commands would be:
+#
+# julia> name = [7, "1,2,2,1"]
+# julia> hierarchy(name)
+#
+# or just
+#
+# julia> hierarchy([7, "1,2,2,1"])
