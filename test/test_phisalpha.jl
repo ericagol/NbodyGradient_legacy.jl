@@ -11,12 +11,12 @@
 
 @testset "phisalpha" begin
 n = 3
-t0 = 7257.93115525
+global t0 = 7257.93115525
 h  = 0.05
 tmax = 600.0
 dlnq = big(1e-15)
 
-elements = readdlm("elements.txt",',')
+global elements = readdlm("elements.txt",',')
 elements[2,1] = 1.0
 elements[3,1] = 1.0
 
@@ -36,7 +36,7 @@ pair = zeros(Bool,n,n)
 #end
 println("pair: ",pair)
 
-jac_step = eye(7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 
 for k=1:n
   m[k] = elements[k,1]
@@ -52,7 +52,8 @@ x0[2,3] = -5e-1*sqrt(x0[1,2]^2+x0[3,2]^2)
 v0[2,1] = 5e-1*sqrt(v0[1,1]^2+v0[3,1]^2)
 v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
-
+x0 = convert(Array{Float64,2}, x0)
+v0 = convert(Array{Float64,2}, v0)
 # Take a step:
 dh17!(x0,v0,h,m,n,pair)
 
@@ -68,7 +69,7 @@ phisalpha!(x,v,h,m,alpha,n,jac_step,dqdt_phi,pair)
 # round-off errors:
 jac_step_num = zeros(BigFloat,7*n,7*n)
 # Save these so that I can compute derivatives numerically:
-xsave = big.(x0)
+global xsave = big.(x0)
 vsave = big.(v0)
 msave = big.(m0)
 hbig = big(h)

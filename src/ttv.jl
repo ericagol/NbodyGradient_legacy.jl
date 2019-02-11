@@ -2,14 +2,16 @@
 # system with BH15 integrator.  Please cite Hernandez & Bertschinger (2015)
 # if using this in a paper.
 
-if ~isdefined(:YEAR)
+using Test
+
+if !@isdefined YEAR
   const YEAR  = 365.242
   const GNEWT = 39.4845/YEAR^2
   const NDIM  = 3
 #const TRANSIT_TOL = 1e-8
-  const TRANSIT_TOL = 10.*sqrt(eps(1.0))
-#const TRANSIT_TOL = 10.*eps(1.0)
-  const third = 1./3.
+  const TRANSIT_TOL = 10.0*sqrt(eps(1.0))
+#const TRANSIT_TOL = 10.0*eps(1.0)
+  const third = 1.0/3.0
   const alpha0 = 0.0
 end
 include("kepler_step.jl")
@@ -17,7 +19,7 @@ include("kepler_drift_step.jl")
 include("init_nbody.jl")
 
 # These "constants" pre-allocate memory for matrices used in the derivative computation (to save time with allocation and garbage collection):
-if ~isdefined(:pxpr0)
+if !@isdefined pxpr0
   const pxpr0 = zeros(Float64,3);const  pxpa0=zeros(Float64,3);const  pxpk=zeros(Float64,3);const  pxps=zeros(Float64,3);const  pxpbeta=zeros(Float64,3)
   const dxdr0 = zeros(Float64,3);const  dxda0=zeros(Float64,3);const  dxdk=zeros(Float64,3);const  dxdv0 =zeros(Float64,3)
   const prvpr0 = zeros(Float64,3);const  prvpa0=zeros(Float64,3);const  prvpk=zeros(Float64,3);const  prvps=zeros(Float64,3);const  prvpbeta=zeros(Float64,3)
@@ -28,7 +30,7 @@ end
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
 #function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
 function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
-# 
+#
 # Input quantities:
 # n     = number of bodies
 # t0    = initial time of integration  [days]
@@ -93,7 +95,7 @@ end
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 # This version is used to test/debug findtransit2 by computing finite difference derivative of findtransit2.
 function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,n,n))
-# 
+#
 # Input quantities:
 # n     = number of bodies
 # t0    = initial time of integration  [days]
@@ -134,6 +136,8 @@ end
 jac_init     = zeros(Float64,7*n,7*n)
 x,v = init_nbody(elements,t0,n,jac_init)
 #x,v = init_nbody(elements,t0,n)
+#tt = convert(Array{Float64,2}, tt)
+#count = convert(Array{Int64,1}, count)
 ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,dtdq0_num,dlnq,rstar,pair)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
@@ -154,7 +158,7 @@ end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64;pair=zeros(Bool,n,n))
-# 
+#
 # Input quantities:
 # n     = number of bodies
 # t0    = initial time of integration  [days]
@@ -229,7 +233,7 @@ jac_transit = zeros(typeof(h),7*n,7*n)
 # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
 dtdq = zeros(typeof(h),7,n)
 # Initialize the Jacobian to the identity matrix:
-jac_step = eye(typeof(h),7*n)
+jac_step = Matrix{typeof(h)}(I,7*n,7*n)
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -282,7 +286,7 @@ while t < (t0+tmax) && param_real
   # Increment counter by one:
   istep +=1
 end
-return 
+return
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
@@ -301,7 +305,7 @@ jac_transit = zeros(Float64,7*n,7*n)
 # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
 dtdq = zeros(Float64,7,n)
 # Initialize the Jacobian to the identity matrix:
-jac_step = eye(Float64,7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -373,7 +377,7 @@ jac_transit = zeros(Float64,7*n,7*n)
 # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
 dtdq = zeros(Float64,7,n)
 # Initialize the Jacobian to the identity matrix:
-jac_step = eye(Float64,7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -445,7 +449,7 @@ istep = 0
 dtdq = zeros(Float64,7,n)
 # Initialize the Jacobian to the identity matrix:
 jac_prior = zeros(Float64,7*n,7*n)
-jac_step = eye(Float64,7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -478,8 +482,8 @@ while t < t0+tmax && param_real
       if count[i] <= ntt_max
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior
-        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,eye(jac_step),dtdq,pair) # Just computing derivative since prior timestep, so start with identity matrix
-#        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,eye(jac_step),dtdq,pair) # Just computing derivative since prior timestep, so start with identity matrix
+        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,Matrix{Float64}(I,size(jac_step)),dtdq,pair) # Just computing derivative since prior timestep, so start with identity matrix
+#        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,Matrix{Float64}(I,jac_step,jac_step),dtdq,pair) # Just computing derivative since prior timestep, so start with identity matrix
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -687,7 +691,7 @@ gm = GNEWT*(m[i]+m[j])
 # jac_ij should be the Jacobian for going from (x_{0,i},v_{0,i},m_i) &  (x_{0,j},v_{0,j},m_j)
 # to  (x_i,v_i,m_i) &  (x_j,v_j,m_j), a 14x14 matrix for the 3-dimensional case.
 # Fill with zeros for now:
-jac_ij .= eye(typeof(h),14)
+jac_ij .= Matrix{typeof(h)}(I,14,14)
 if gm == 0
 #  Do nothing
 #  for k=1:3
@@ -779,7 +783,7 @@ state = zeros(typeof(h),12)
 delx = zeros(typeof(h),NDIM)
 delv = zeros(typeof(h),NDIM)
 # jac_ij should be the Jacobian for going from (x_{0,i},v_{0,i},m_i) &  (x_{0,j},v_{0,j},m_j)
-# to  (x_i,v_i,m_i) &  (x_j,v_j,m_j), a 14x14 matrix for the 3-dimensional case. 
+# to  (x_i,v_i,m_i) &  (x_j,v_j,m_j), a 14x14 matrix for the 3-dimensional case.
 # Fill with zeros for now:
 fill!(jac_ij,0.0)
 for k=1:NDIM
@@ -931,7 +935,7 @@ function kickfast!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_s
     dqdt_kick::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
 rij = zeros(typeof(h),3)
 #fill!(jac_step,zero(typeof(h)))
-jac_step.=eye(typeof(h),7*n)
+jac_step.=Matrix{typeof(h)}(I,7*n,7*n)
 @inbounds for i=1:n-1
   indi = (i-1)*7
   for j=i+1:n
@@ -1043,7 +1047,7 @@ rij = zeros(typeof(h),3)
 aij = zeros(typeof(h),3)
 coeff = alpha*h^3/96*2*GNEWT
 fac = 0.0; fac1 = 0.0; fac2 = 0.0; fac3 = 0.0; r1 = 0.0; r2 = 0.0; r3 = 0.0
-#jac_step.=eye(typeof(h),7*n)
+#jac_step.=Matrix{typeof(h)}(I,7*n,7*n)
 @inbounds for i=1:n-1
   indi = (i-1)*7
   for j=i+1:n
@@ -1106,7 +1110,7 @@ indi = 0; indj=0; indd = 0
       r1 = sqrt(r2)
       ardot = aij[1]*rij[1]+aij[2]*rij[2]+aij[3]*rij[3]
       fac1 = coeff/r1^5
-      fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) 
+      fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot)
       for k=1:3
   #      fac = coeff/r1^5*(rij[k]*(2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) - r2*aij[k])
         fac = fac1*(rij[k]*fac2- r2*aij[k])
@@ -1162,7 +1166,7 @@ indi = 0; indj=0; indd = 0
           jac_step[indj+3+k,indd+7] -= fac*m[i]*(dadq[k,i,4,d]-dadq[k,j,4,d])
         end
         # Now, for the final term:  (\delta a_ij . r_ij ) r_ij
-        fac = 3.*fac1*rij[k]
+        fac = 3.0*fac1*rij[k]
         @inbounds for d=1:n
           indd = (d-1)*7
           for p=1:3
@@ -1225,7 +1229,7 @@ rij = zeros(typeof(h),3)
 aij = zeros(typeof(h),3)
 dadq = zeros(typeof(h),3,n,4,n)  # There is no velocity dependence
 dotdadq = zeros(typeof(h),4,n)  # There is no velocity dependence
-jac_step.=eye(typeof(h),7*n)
+jac_step.=Matrix{typeof(h)}(I,7*n,7*n)
 fac = 0.0; fac1 = 0.0; fac2 = 0.0; fac3 = 0.0; r1 = 0.0; r2 = 0.0; r3 = 0.0
 coeff = h^3/36*GNEWT
 @inbounds for i=1:n-1
@@ -1356,7 +1360,7 @@ indi = 0; indj=0; indd = 0
           jac_step[indj+3+k,indd+7] -= fac*m[i]*(dadq[k,i,4,d]-dadq[k,j,4,d])
         end
         # Now, for the final term:  (\delta a_ij . r_ij ) r_ij
-        fac = 3.*fac1*rij[k]
+        fac = 3.0*fac1*rij[k]
         @inbounds for d=1:n
           indd = (d-1)*7
           for p=1:3
@@ -1531,7 +1535,7 @@ end
 phic!(x,v,h,m,n,pair)
 # kick and correction for pairs which are kicked:
 if alpha != 1.0
-  phisalpha!(x,v,h,m,2.*(1.-alpha),n,pair)
+  phisalpha!(x,v,h,m,2.0*(1.0-alpha),n,pair)
 end
 for i=n-1:-1:1
   for j=n:-1:i+1
@@ -1621,7 +1625,7 @@ indi = 0; indj = 0
 end
 phic!(x,v,h,m,n,jac_phi,pair)
 if alpha != one
-#  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi,pair) # 10%
+#  phisalpha!(x,v,h,m,2.0*(1.0-alpha),n,jac_phi,pair) # 10%
   phisalpha!(x,v,h,m,two*(one-alpha),n,jac_phi,dqdt_phi,pair) # 10%
 #  @inbounds for i in eachindex(jac_step)
 #    jac_copy[i] = jac_step[i]
@@ -1670,7 +1674,7 @@ for i=n-1:-1:1
       @inbounds for k2=1:sevn, k1=1:7
         jac_step[indj+k1,k2]=jac_tmp2[7+k1,k2]
       end
-      driftij!(x,v,i,j,-h2,jac_step,n) 
+      driftij!(x,v,i,j,-h2,jac_step,n)
     end
   end
 end

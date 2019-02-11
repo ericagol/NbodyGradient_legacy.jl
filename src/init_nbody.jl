@@ -94,8 +94,9 @@ v = zeros(eltype(elements),NDIM,n_body)
 #    end
 #  end
 #end
-x = transpose(*(ainv,rkepler))
-v = transpose(*(ainv,rdotkepler))
+x = transpose(*(ainv,rkepler)) ; x = convert(Array{Float64,2},x)
+v = transpose(*(ainv,rdotkepler)); v = convert(Array{Float64,2},x)
+
 # Return the cartesian position & velocity matrices:
 #return x,v,amat,ainv
 return x,v
@@ -238,8 +239,8 @@ v = zeros(Float64,NDIM,n_body)
 #    end
 #  end
 #end
-x = transpose(*(ainv,rkepler))
-v = transpose(*(ainv,rdotkepler))
+x = transpose(*(ainv,rkepler)); x = convert(Array{Float64,2},x)
+v = transpose(*(ainv,rdotkepler)); v = convert(Array{Float64,2},x)
 # Finally, compute the overall Jacobian.
 # First, compute it for the orbital elements:
 dxdm = zeros(Float64,3,n_body); dvdm = zeros(Float64,3,n_body)

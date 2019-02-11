@@ -3,19 +3,23 @@
 #include("../src/kepler_solver_derivative.jl")
 #include("../src/ttv.jl")
 
+using DelimitedFiles
+using LinearAlgebra
+
 @testset "keplerij" begin
 
 # Next, try computing two-body Keplerian Jacobian:
 
+global t0 = 7257.93115525
+global elements = readdlm("elements.txt",',')
+
 n = 3
-t0 = 7257.93115525
 h  = 0.05
 hbig  = big(h)
 tmax = 600.0
 #dlnq = 1e-8
 dlnq = 1e-20
 
-elements = readdlm("elements.txt",',')
 #elements[2,1] = 0.75
 elements[2,1] = 1.0
 elements[3,1] = 1.0
@@ -70,7 +74,7 @@ println("max(jac_ij - jac_ij_big): ",maxabs(convert(Array{Float64,2},jac_ij_big)
 
 # Now, compute the derivatives numerically:
 jac_ij_num = zeros(BigFloat,14,14)
-xsave = big.(x)
+global xsave = big.(x)
 vsave = big.(v)
 msave = big.(m)
 
@@ -256,7 +260,7 @@ jac_ij_num[14,14] =  1.0
 #println(jac_ij)
 #println(jac_ij_num)
 #println(jac_ij./jac_ij_num)
-emax = 0.0; imax = 0; jmax = 0
+global emax = 0.0; global imax = 0; global jmax = 0
 for i=1:14, j=1:14
   if jac_ij[i,j] != 0.0
     diff = abs(convert(Float64,jac_ij_num[i,j])/jac_ij[i,j]-1.0)
