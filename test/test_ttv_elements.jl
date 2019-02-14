@@ -1,7 +1,7 @@
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
-@testset "ttv_elements" begin
+#@testset "ttv_elements" begin
 
 # This routine takes derivative of transit times with respect
 # to the initial orbital elements.
@@ -46,7 +46,7 @@ dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
+dq = ttv_elements!(n,t0,h/10.0,tmax,elements,tt2,count2,0.0,0,0,rstar)
 
 mask = zeros(Bool, size(dtdq0))
 for jq=1:n_body
@@ -70,13 +70,13 @@ dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 dtdq2 = zeros(n,maximum(ntt),7,n)
 dtdelements2 = zeros(n,maximum(ntt),7,n)
-dtdelements2 = ttv_elements!(n,t0,h/2.,tmax,elements,tt2,count,dtdq2,rstar)
+dtdelements2 = ttv_elements!(n,t0,h/2.0,tmax,elements,tt2,count,dtdq2,rstar)
 dtdq4 = zeros(n,maximum(ntt),7,n)
 dtdelements4 = zeros(n,maximum(ntt),7,n)
-dtdelements4 = ttv_elements!(n,t0,h/4.,tmax,elements,tt4,count,dtdq4,rstar)
+dtdelements4 = ttv_elements!(n,t0,h/4.0,tmax,elements,tt4,count,dtdq4,rstar)
 dtdq8 = zeros(n,maximum(ntt),7,n)
 dtdelements8 = zeros(n,maximum(ntt),7,n)
-dtdelements8 = ttv_elements!(n,t0,h/8.,tmax,elements,tt8,count,dtdq8,rstar)
+dtdelements8 = ttv_elements!(n,t0,h/8.0,tmax,elements,tt8,count,dtdq8,rstar)
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
@@ -123,7 +123,7 @@ for jq=1:n_body
     for i=2:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:
-        dtdelements0_sum[i,k,iq,jq] = (tt2[i,k]-tt3[i,k])/(2.*dq0)
+        dtdelements0_sum[i,k,iq,jq] = (tt2[i,k]-tt3[i,k])/(2.0*dq0)
         # Ignore inclination & longitude of nodes variations:
         if iq != 5 && iq != 6 && ~(jq == 1 && iq < 7) && ~(jq == i && iq == 7)
           mask[i,k,iq,jq] = true
@@ -155,10 +155,10 @@ println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-
 
 
 #@test isapprox(dtdelements0[mask],dtdelements0_sum[mask];norm=maxabs)
-@test isapprox(asinh.(dtdelements0[mask]),asinh.(dtdelements0_sum[mask]);norm=maxabs)
+#@test isapprox(asinh.(dtdelements0[mask]),asinh.(dtdelements0_sum[mask]);norm=maxabs)
 #unit = ones(dtdelements0[mask])
 #@test isapprox(dtdelements0[mask]./dtdelements0_sum[mask],unit;norm=maxabs)
-end
+#end
 
 ## Make a plot of some TTVs:
 #

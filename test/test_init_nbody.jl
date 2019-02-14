@@ -1,19 +1,17 @@
-const YEAR  = 365.242
-const GNEWT = 39.4845/YEAR^2  # Units of MSUN*AU^3/YEAR^2
-const NDIM  = 3
-const third = 1./3.
+using Test
+using DelimitedFiles
 
-include("../src/init_nbody.jl")
+#include("../src/init_nbody.jl")
 
 @testset "init_nbody" begin
 
-elements = readdlm("elements.txt",',')
+global elements = readdlm("elements.txt",',')
+global t0 = 7257.93115525
 
 n_body = 4
-t0 = 7257.93115525
 jac_init     = zeros(Float64,7*n_body,7*n_body)
 jac_init_num = zeros(BigFloat,7*n_body,7*n_body)
-x,v = init_nbody(elements,t0,n_body,jac_init)
+global x,v = init_nbody(elements,t0,n_body,jac_init)
 elements0 = copy(elements)
 #dq = big.([1e-10,1e-5,1e-6,1e-6,1e-6,1e-5,1e-5])
 dq = big.([1e-10,1e-8,1e-8,1e-8,1e-8,1e-8,1e-8])
@@ -50,9 +48,10 @@ for j=1:n_body
   end
   jac_init_num[j*7,j*7]=1.0
 end
+#jac_init_num = convert(Array{Float64,2},jac_init_num)
 
 #println("Maximum jac_init-jac_init_num: ",maximum(abs.(jac_init-jac_init_num)))
 println("Maximum jac_init-jac_init_num: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_num))))
-#@test isapprox(jac_init_num,jac_init)
-@test isapprox(jac_init_num,jac_init;norm=maxabs)
+@test isapprox(jac_init_num,jac_init)
+#@test isapprox(jac_init_num,jac_init;norm=maxabs)
 end

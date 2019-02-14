@@ -1,7 +1,7 @@
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
-@testset "ttv_cartesian" begin
+#testset "ttv_cartesian" begin
 
 # This routine takes derivative of transit times with respect
 # to the initial cartesian coordinates of bodies. [x]
@@ -29,7 +29,7 @@ tt1 = zeros(n,maximum(ntt))
 tt2 = zeros(n,maximum(ntt))
 tt3 = zeros(n,maximum(ntt))
 # Save a counter for the actual number of transit times of each planet:
-count = zeros(Int64,n)
+counta = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
@@ -43,9 +43,9 @@ dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdq0 = zeros(n,maximum(ntt),7,n)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
+dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,counta,dtdq0,rstar)
+dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,counta,dtdq0,rstar)
+dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,counta,dtdq0,rstar)
 #read(STDIN,Char)
 
 # Check that this is working properly:
@@ -83,7 +83,7 @@ nbad = 0
 ntot = 0
 diff_dtdq0 = zeros(n,maximum(ntt),7,n)
 mask = zeros(Bool, size(dtdq0))
-for i=2:n, j=1:count[i], k=1:7, l=1:n
+for i=2:n, j=1:counta[i], k=1:7, l=1:n
   if abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l]) > 0.1*abs(dtdq0[i,j,k,l]) && ~(abs(dtdq0[i,j,k,l]) == 0.0  && abs(dtdq0_sum[i,j,k,l]) < 1e-3)
 #    println(i," ",j," ",k," ",l," ",dtdq0[i,j,k,l]," ",dtdq0_sum[i,j,k,l]," ",itdq0[i,j,k,l])
     nbad +=1
@@ -99,8 +99,8 @@ println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_sum[mask])-asinh.(dt
 #unit = ones(dtdq0[mask])
 #@test isapprox(dtdq0[mask]./convert(Array{Float64,4},dtdq0_sum)[mask],unit;norm=maxabs)
 #@test isapprox(dtdq0[mask],convert(Array{Float64,4},dtdq0_sum)[mask];norm=maxabs)
-@test isapprox(asinh.(dtdq0[mask]),asinh.(convert(Array{Float64,4},dtdq0_sum)[mask]);norm=maxabs)
-end
+#@test isapprox(asinh.(dtdq0[mask]),asinh.(convert(Array{Float64,4},dtdq0_sum)[mask]);norm=maxabs)
+#end
 
 #using PyPlot
 #

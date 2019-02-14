@@ -1,11 +1,19 @@
 # Tests the routine ah18 jacobian:
 
-#include("../src/ttv.jl")
+using DelimitedFiles
+using LinearAlgebra
+
+include("../src/init_nbody.jl")
+include("../src/ttv.jl")
 
 # Next, try computing three-body Keplerian Jacobian:
 
 #@testset "ah18" begin
 
+const YEAR  = 365.242
+const GNEWT = 39.4845/YEAR^2  # Units of MSUN*AU^3/YEAR^2
+const NDIM  = 3
+const third = 1.0/3.0
 
 #n = 8
 n = 3
@@ -33,7 +41,7 @@ v0=zeros(3,n)
 pair = zeros(Bool,n,n)
 
 # Initialize with identity matrix:
-jac_step = eye(Float64,7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 
 for k=1:n
   m[k] = elements[k,1]
@@ -50,6 +58,8 @@ v0[2,1] = 5e-1*sqrt(v0[1,1]^2+v0[3,1]^2)
 v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 xbig = big.(x0); vbig = big.(v0)
+x0 = convert(Array{Float64,2}, x0)
+v0 = convert(Array{Float64,2}, v0)
 # Take a single step (so that we aren't at initial coordinates):
 @time for i=1:nstep; ah18!(x0,v0,h,m,n,pair); end
 # Take a step with big precision:
@@ -209,13 +219,13 @@ end
 #  end
 #end
 
-jacmax = 0.0; jac_diff = 0.0
-imax = 0; jmax = 0; kmax = 0; lmax = 0
+global jacmax = 0.0; global jac_diff = 0.0
+global imax = 0; global jmax = 0; global kmax = 0; global lmax = 0
 for i=1:7, j=1:3, k=1:7, l=1:3
   if jac_step[(j-1)*7+i,(l-1)*7+k] != 0
     diff = abs(jac_step_num[(j-1)*7+i,(l-1)*7+k]/jac_step[(j-1)*7+i,(l-1)*7+k]-1.0)
     if diff > jacmax
-      jac_diff = diff; imax = i; jmax = j; kmax = k; lmax = l; jacmax = jac_step[(j-1)*7+i,(l-1)*7+k]
+      global jac_diff = diff; global imax = i; global jmax = j; global kmax = k; global lmax = l; global jacmax = jac_step[(j-1)*7+i,(l-1)*7+k]
     end
   end
 end
@@ -253,7 +263,7 @@ println("Maximum diff asinh(jac_step):   ",maximum(abs.(asinh.(jac_step)-asinh.(
 #println("dqdt-dqdt_num: ",maxabs(dqdt-convert(Array{Float64,1},dqdt_num)))
 
 #@test isapprox(jac_step,jac_step_num)
-#@test isapprox(jac_step,jac_step_num;norm=maxabs)
-@test isapprox(asinh.(jac_step),asinh.(jac_step_num);norm=maxabs)
+@test isapprox(jac_step,jac_step_num;norm=maxabs)
+#@test isapprox(asinh.(jac_step),asinh.(jac_step_num);norm=maxabs)
 #@test isapprox(dqdt,dqdt_num;norm=maxabs)
 #end
