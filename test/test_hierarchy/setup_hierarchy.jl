@@ -1,14 +1,18 @@
+# Dependencies
+using DelimitedFiles
+using Distributed
+
 ################################################################################
 # Sets up planetary-hierarchy index matrix using an initial condition file
-# of the form "test.ic" (included in "test/" directory), or in a 2d array of
+# of the form "test.txt" (included in "test/" directory), or in a 2d array of
 # the form file = [x ; "x,y,z,..."] where x,y,z are Int64
 ################################################################################
 function hierarchy(file::String)
     # Reads in a separates the file into variables
-    file = readdlm(file)
+    file = readdlm(file, dims=(2,2))
     nbody = file[1,2]
     bins = file[2,2]
-    bins = replace(bins,","," ")
+    bins = replace(bins,"," => " ")
     bins = readdlm(IOBuffer(bins),Int64)
     level = length(bins)
 
@@ -19,8 +23,8 @@ function hierarchy(file::String)
     h = zeros(Float64,nbody,nbody)
 
     # Starts filling the array and returns it
-    bottom_level(nbody,bins,level,h,1)
-    h[end,1:end] = 1
+    bottom_level(nbody,bins,h,1)
+    h[end,1:end] .= 1
     return h
 end
 
@@ -29,7 +33,7 @@ function hierarchy(file::Array{Any,1})
     # Separates the initial array into variables
     nbody = file[1]
     bins = file[2]
-    bins = replace(bins,","," ")
+    bins = replace(bins,"," => " ")
     bins = readdlm(IOBuffer(bins),Int64)
     level = length(bins)
 
@@ -40,22 +44,22 @@ function hierarchy(file::Array{Any,1})
     h = zeros(Float64,nbody,nbody)
 
     # Starts filling the array and returns it
-    bottom_level(nbody,bins,level,h,1)
-    h[end,1:end] = 1
+    bottom_level(nbody,bins,h,1)
+    h[end,1:end] .= 1
     return h
 end
 
 ################################################################################
 # Sets up the first level of the hierchary.
 ################################################################################
-function bottom_level(nbody::Int64,bins::Array{Int64,2},level::Int64,h::Array{Float64},iter::Int64)
+function bottom_level(nbody::Int64,bins::Array{Int64,2},h::Array{Float64},iter::Int64)
 
     # Fills the very first level of the hierarchy and iterates related variables
     h[1,1] = 1
     h[1,2] = -1
     if bins[1] > 1
         for i=1:bins[1]-1
-            if !isdefined(:j) || isa(j,Void)
+            if !(@isdefined j) || isa(j,Nothing)
                 global j = i
             end
             if (j+3) <= nbody
@@ -86,7 +90,9 @@ end
 # symmetric). ***
 ################################################################################
 function n_level(nbody::Int64,bodies::Int64,bins::Array{Int64,2},binsp::Int64,row::Int64,h::Array{Float64},iter::Int64)
-
+#print("nbody: ", nbody, "\n")
+#print("bodies: ", bodies, "\n")
+#print("row: ", row, "\n")
 # Series of checks to know which level to fill and which bins number to use
 if iter <= length(bins)
     if nbody != bodies
@@ -97,8 +103,15 @@ if iter <= length(bins)
         end
     elseif nbody == bodies
         if row == nbody-1
-            h[row,1:row-1] = 1
-            h[row,row:bodies] = -1
+            if (bodies%4) > 2
+                h[row,1:row-2] .= 1
+                h[row,row-1:bodies] .= -1
+                return h
+            elseif (bodies%4) <= 2
+                h[row,1:row-1] .= 1
+                h[row,row:bodies] .= -1
+                return h
+            end
         end
     end
 
@@ -106,13 +119,13 @@ if iter <= length(bins)
     if nbody >= bodies
         if binsp == 1
             if bins[iter] == 1
-                h[row,1:bodies-binsp] = 1
-                h[row,bodies-binsp + 1:bodies] = -1
+                h[row,1:bodies-binsp] .= 1
+                h[row,bodies-binsp + 1:bodies] .= -1
                 row = row + binsp
                 binsp = bins[iter]
                 n_level(nbody,bodies,bins,binsp,row,h,iter+1)
             elseif bins[iter] == 2
-                h[row,1:bodies-(2*binsp)-1] = 1
+                h[row,1:bodies-(2*binsp)-1] .= 1
                 h[row,bodies-(2*binsp)] = -1
                 h[row+1,bodies-(2*binsp)+1] = 1
                 h[row+1,bodies] = -1
@@ -122,41 +135,49 @@ if iter <= length(bins)
             end
         elseif binsp == 2
             if bins[iter] == 1
-                h[row,1:row-1] = 1
-                h[row,row:bodies] = -1
+                h[row,1:row-1] .= 1
+                h[row,row:bodies] .= -1
                 row = row + 1
                 binsp = bins[iter]
                 n_level(nbody,bodies,bins,binsp,row,h,iter+1)
             elseif bins[iter] == 2
-                h[row,1:row-1] = 1
-                h[row,row:bodies-2*(binsp-1)] = -1
+                h[row,1:row-1] .= 1
+                h[row,row:bodies-2*(binsp-1)] .= -1
                 h[row+1,bodies-2*(binsp-1)+1] = 1
                 h[row+1,bodies] = -1
                 row = row + 2
                 binsp = bins[iter]
                 n_level(nbody,bodies,bins,binsp,row,h,iter+1)
             end
+        elseif binsp == 3
+            if bins[iter] == 2
+                h[row,1:Int64(bodies/2)-1] .= 1
+                h[row,Int64(bodies/2):2*Int64(bodies/3)] .= -1
+                h[row+1,2*Int64(bodies/3)+1:bodies] .= 1
+                h[row+1,bodies+1] = -1
+                row = row + 2
+                binsp = bins[iter]
+                bodies = bodies + 1
+                n_level(nbody,bodies,bins,binsp,row,h,iter+1)
+            end
         end
     end
-
 end
 end
 
 ################################################################################
 # Called if the hierarchy is symmetric (or if the hierarchy has all of the
 # bodies on the bottom level). Fills the remaining rows.
-#
-# *** Only works for 4 and 8 body hierarchies ***
 ################################################################################
 function symmetric(nbody::Int64,bodies::Int64,bins::Array{Int64,2},binsp::Int64,row::Int64,h::Array{Float64},iter::Int64)
     global j = 0
     while row < nbody-1
-        h[row,1+j:2+j] = 1
-        h[row,j+3:j+4] = -1
+        h[row,1+j:2+j] .= 1
+        h[row,j+3:j+4] .= -1
         j = j + 4
         row = row + 1
     end
-    h[row,1:binsp] = 1
-    h[row,binsp+1:nbody] = -1
+    h[row,1:binsp] .= 1
+    h[row,binsp+1:nbody] .= -1
     clear!(:j)
 end
