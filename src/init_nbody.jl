@@ -19,10 +19,11 @@ include("kepler_init.jl")
 #    while 3 is an interior planets orbiting the stars, and 4/5 are a planet/moon orbiting exterior.
 #  - We compute the N-body positions with each Keplerian connection (one at each level), starting
 #    at the bottom and moving upwards.
-#  
+#
 
-function init_nbody(elements::Array{T,2},t0::T,n_body::Int64) where {T <: Real}
+function init_nbody(elements::Array{T,2},t0::T,IC::Array{Any,1}) where {T <: Real}
 # the "_plane" is to remind us that this is currently plane-parallel, so inclination & Omega are zero
+n_body = IC[1]
 n_level = n_body-1
 # Input -
 # elements: masses & orbital elements for each Keplerian (in this case, each planet plus star)
@@ -103,9 +104,10 @@ return x,v
 end
 
 # Version including derivatives:
-function init_nbody(elements::Array{Float64,2},t0::Float64,n_body::Int64,jac_init::Array{Float64,2})
+function init_nbody(elements::Array{Float64,2},t0::Float64,IC::Array{Any,1},jac_init::Array{Float64,2})
 
 # the "_plane" is to remind us that this is currently plane-parallel, so inclination & Omega are zero
+n_body = IC[1]
 n_level = n_body-1
 # Input -
 # elements: masses & orbital elements for each Keplerian (in this case, each planet plus star)
