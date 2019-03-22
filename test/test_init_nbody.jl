@@ -5,23 +5,24 @@ using DelimitedFiles
 
 @testset "init_nbody" begin
 
-global elements = readdlm("elements.txt",',')
+global elements = readdlm("elements.txt",',',skipstart=1)
 global t0 = 7257.93115525
 
-n_body = 4
+IC = [4,"1,1,1,1"]
+n_body = IC[1]
 jac_init     = zeros(Float64,7*n_body,7*n_body)
 jac_init_num = zeros(BigFloat,7*n_body,7*n_body)
-global x,v = init_nbody(elements,t0,n_body,jac_init)
+global x,v = init_nbody(elements,t0,IC,jac_init)
 elements0 = copy(elements)
 #dq = big.([1e-10,1e-5,1e-6,1e-6,1e-6,1e-5,1e-5])
 dq = big.([1e-10,1e-8,1e-8,1e-8,1e-8,1e-8,1e-8])
 
 #dq = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
 t0big = big(t0)
+elementsbig = big.(elements0)
 # Now, compute derivatives numerically:
 for j=1:n_body
   for k=1:7
-    elementsbig = big.(elements0)
     dq0 = dq[k]; if j==1 && k==1 ; dq0 = big(1e-15); end
     elementsbig[j,k] += dq0
     xp,vp = init_nbody(elementsbig,t0big,n_body)
