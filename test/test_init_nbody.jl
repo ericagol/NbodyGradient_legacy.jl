@@ -25,9 +25,9 @@ for j=1:n_body
   for k=1:7
     dq0 = dq[k]; if j==1 && k==1 ; dq0 = big(1e-15); end
     elementsbig[j,k] += dq0
-    xp,vp = init_nbody(elementsbig,t0big,n_body)
+    xp,vp = init_nbody(elementsbig,t0big,IC)
     elementsbig[j,k] -= 2dq0
-    xm,vm = init_nbody(elementsbig,t0big,n_body)
+    xm,vm = init_nbody(elementsbig,t0big,IC)
     for l=1:n_body, p=1:3
       i1 = (l-1)*7+p
       if k == 1
