@@ -28,8 +28,8 @@ if !@isdefined pxpr0
 end
 
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
-#function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
-function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
+#function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},IC::Array{Any,1},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
+function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},IC::Array{Any,1},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
 #
 # Input quantities:
 # n     = number of bodies
@@ -68,7 +68,7 @@ if iq == 7 && dlnq != 0.0
   m[jq] += dq
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-x,v = init_nbody(elements,t0,n)
+x,v = init_nbody(elements,t0,IC)
 # Perturb the initial condition by an amount dlnq (if it is non-zero):
 if dlnq != 0.0 && iq > 0 && iq < 7
   if iq < 4
@@ -94,7 +94,7 @@ end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 # This version is used to test/debug findtransit2 by computing finite difference derivative of findtransit2.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,n,n))
+function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},IC::Array{Any,1},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,n,n))
 #
 # Input quantities:
 # n     = number of bodies
@@ -134,7 +134,7 @@ for i=1:n
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
 jac_init     = zeros(Float64,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
+x,v = init_nbody(elements,t0,IC,jac_init)
 #x,v = init_nbody(elements,t0,n)
 #tt = convert(Array{Float64,2}, tt)
 #count = convert(Array{Int64,1}, count)
@@ -157,7 +157,7 @@ return dtdelements
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64;pair=zeros(Bool,n,n))
+function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},IC::Array{Any,1},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64;pair=zeros(Bool,n,n))
 #
 # Input quantities:
 # n     = number of bodies
@@ -196,7 +196,7 @@ for i=1:n
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
 jac_init     = zeros(Float64,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
+x,v = init_nbody(elements,t0,IC,jac_init)
 #x,v = init_nbody(elements,t0,n)
 ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,rstar,pair)
 # Need to apply initial jacobian TBD - convert from
