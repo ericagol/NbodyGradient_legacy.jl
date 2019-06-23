@@ -1,6 +1,6 @@
 include("../src/ttv.jl")
 maxabs(x) = maximum(abs.(x))
-using Base.Test
+using Test
 
 include("test_kepler_init.jl")
 include("test_init_nbody.jl")

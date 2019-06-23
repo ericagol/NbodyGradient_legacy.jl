@@ -4,7 +4,7 @@
 
 # Next, try computing three-body Keplerian Jacobian:
 
-#@testset "dh17" begin
+@testset "dh17" begin
 
 #n = 8
 n = 3
@@ -39,7 +39,7 @@ pair = zeros(Bool,n,n)
 #end
 
 # Initialize with identity matrix:
-jac_step = eye(Float64,7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 
 for k=1:n
   m[k] = elements[k,1]
@@ -55,6 +55,8 @@ x0[2,3] = -5e-1*sqrt(x0[1,2]^2+x0[3,2]^2)
 v0[2,1] = 5e-1*sqrt(v0[1,1]^2+v0[3,1]^2)
 v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
+x0 = convert(Array{Float64,2}, x0)
+v0 = convert(Array{Float64,2}, v0)
 xtest = copy(x0); vtest=copy(v0)
 xbig = big.(x0); vbig = big.(v0)
 # Take a single step (so that we aren't at initial coordinates):
@@ -113,10 +115,10 @@ for j=1:n
   # Vary the initial phase-space elements:
   for jj=1:3
   # Initial positions, velocities & masses:
-    xm = big.(x0)
-    vm = big.(v0)
-    mm = big.(m0)
-    dq = dlnq * xm[jj,j]
+    global xm = big.(x0)
+    global vm = big.(v0)
+    global mm = big.(m0)
+    global dq = dlnq * xm[jj,j]
     if xm[jj,j] != 0.0
       xm[jj,j] -=  dq
     else
@@ -147,9 +149,9 @@ for j=1:n
       end
     end
   # Next velocity derivatives:
-    xm= big.(x0)
-    vm= big.(v0)
-    mm= big.(m0)
+    xm = big.(x0)
+    vm = big.(v0)
+    mm = big.(m0)
     dq = dlnq * vm[jj,j]
     if vm[jj,j] != 0.0
       vm[jj,j] -=  dq
@@ -160,7 +162,7 @@ for j=1:n
     for istep=1:nstep
       dh17!(xm,vm,hbig,mm,n,pair)
     end
-    xp= big.(x0)
+    global xp= big.(x0)
     vp= big.(v0)
     mp= big.(m0)
     dq = dlnq * vp[jj,j]
@@ -181,17 +183,17 @@ for j=1:n
     end
   end
 # Now vary mass of planet:
-  xm= big.(x0)
-  vm= big.(v0)
-  mm= big.(m0)
-  dq = mm[j]*dlnq
+  global xm= big.(x0)
+  global vm= big.(v0)
+  global mm= big.(m0)
+  global dq = mm[j]*dlnq
   mm[j] -= dq
   for istep=1:nstep
     dh17!(xm,vm,hbig,mm,n,pair)
   end
-  xp= big.(x0)
-  vp= big.(v0)
-  mp= big.(m0)
+  global xp= big.(x0)
+  global vp= big.(v0)
+  global mp= big.(m0)
   dq = mp[j]*dlnq
   mp[j] += dq
   for istep=1:nstep
@@ -219,13 +221,13 @@ end
 #  end
 #end
 
-jacmax = 0.0; jac_diff = 0.0
-imax = 0; jmax = 0; kmax = 0; lmax = 0
+global jacmax = 0.0; global jac_diff = 0.0
+global imax = 0; global jmax = 0; global kmax = 0; global lmax = 0
 for i=1:7, j=1:3, k=1:7, l=1:3
   if jac_step[(j-1)*7+i,(l-1)*7+k] != 0
     diff = abs(jac_step_num[(j-1)*7+i,(l-1)*7+k]/jac_step[(j-1)*7+i,(l-1)*7+k]-1.0)
     if diff > jacmax
-      jac_diff = diff; imax = i; jmax = j; kmax = k; lmax = l; jacmax = jac_step[(j-1)*7+i,(l-1)*7+k]
+      global jac_diff = diff; global imax = i; global jmax = j; global kmax = k; global lmax = l; global jacmax = jac_step[(j-1)*7+i,(l-1)*7+k]
     end
   end
 end
@@ -243,15 +245,15 @@ x = copy(x0)
 v = copy(v0)
 m = copy(m0)
 dh17!(x,v,h,m,n,dqdt,pair)
-xm= big.(x0)
-vm= big.(v0)
-mm= big.(m0)
-dq = hbig*dlnq
+global xm = big.(x0)
+global vm = big.(v0)
+global mm = big.(m0)
+global dq = hbig*dlnq
 hbig -= dq
 dh17!(xm,vm,hbig,mm,n,pair)
-xp= big.(x0)
-vp= big.(v0)
-mp= big.(m0)
+global xp = big.(x0)
+global vp = big.(v0)
+global mp = big.(m0)
 hbig += 2dq
 dh17!(xp,vp,hbig,mp,n,pair)
 for i=1:n, k=1:3
@@ -259,6 +261,7 @@ for i=1:n, k=1:3
   dqdt_num[(i-1)*7+3+k] = .5*(vp[k,i]-vm[k,i])/dq
 end
 dqdt_num = convert(Array{Float64,1},dqdt_num)
+jac_step_num = convert(Array{Float64,2},jac_step_num)
 #println("dqdt: ",dqdt," ",dqdt_num," diff: ",dqdt-dqdt_num)
 #println("dqdt-dqdt_num: ",maxabs(dqdt-convert(Array{Float64,1},dqdt_num)))
 
@@ -266,4 +269,4 @@ dqdt_num = convert(Array{Float64,1},dqdt_num)
 #@test isapprox(jac_step,jac_step_num;norm=maxabs)
 @test isapprox(asinh.(jac_step),asinh.(jac_step_num);norm=maxabs)
 #@test isapprox(dqdt,dqdt_num;norm=maxabs)
-#end
+end

@@ -1,0 +1,2 @@
+bodies      5
+bins        1,2,1
