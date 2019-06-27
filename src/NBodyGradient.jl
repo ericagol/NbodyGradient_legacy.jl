@@ -16,7 +16,7 @@ module NBodyGradient
 	include("kepler_drift_step.jl")
 	include("kepler_init.jl")
 	include("kepler_solver_derivative.jl")
-	include("kelper_step.jl")
+	include("kepler_step.jl")
 	include("setup_hierarchy.jl")
 	include("ttv.jl")
 

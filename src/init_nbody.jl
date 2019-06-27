@@ -4,8 +4,6 @@ using DelimitedFiles
 include("kepler_init.jl")
 include("setup_hierarchy.jl")
 
-global NDIM = 3
-
 function init_nbody(elements::Array{T,2},t0::T,IC::Array{Any,1}) where {T <: Real}
 
 nbody = IC[1]
