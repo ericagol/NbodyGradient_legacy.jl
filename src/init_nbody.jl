@@ -47,7 +47,7 @@ x = convert(Array{Float64,2},x)
 
 v = zeros(Float64,NDIM)
 v = transpose(*(Ainv,rdotkepler))
-v = convert(Array{Float64,2},x)
+v = convert(Array{Float64,2},v)
 
 return x,v
 
@@ -113,20 +113,20 @@ x = convert(Array{Float64,2},x)
 
 v = zeros(Float64,NDIM)
 v = transpose(*(Ainv,rdotkepler))
-v = convert(Array{Float64,2},x)
+v = convert(Array{Float64,2},v)
 
 # Cartesian derivatives
 dxdm = zeros(Float64,NDIM,nbody)
 dvdm = zeros(Float64,NDIM,nbody)
 
-for i=1:n_body
-  for k=1:n_body
-    for j=1:3, l=1:7*n_body
+for i=1:nbody
+  for k=1:nbody
+    for j=1:3, l=1:7*nbody
       jac_init[(i-1)*7+j,l] += Ainv[i,k]*jac_kepler[(k-1)*6+j,l]
       jac_init[(i-1)*7+3+j,l] += Ainv[i,k]*jac_kepler[(k-1)*6+3+j,l]
     end
   end
-  for k=1:n_body
+  for k=1:nbody
     dxdm = transpose(dAinvdm[:,:,k]*rkepler)
     dvdm = transpose(dAinvdm[:,:,k]*rdotkepler)
     jac_init[(i-1)*7+1:(i-1)*7+3,k*7] += dxdm[1:3,i]
