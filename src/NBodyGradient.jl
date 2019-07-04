@@ -6,6 +6,7 @@ module NBodyGradient
 	using Distributed
 	using ForwardDiff
 	using LinearAlgebra
+	using Test
 
     ################### Includes ###################
 	
