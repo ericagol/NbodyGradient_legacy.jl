@@ -16,7 +16,7 @@ m = reshape(vcat(elements[:,1])[1:nbody],nbody,1) # put masses into a vector
 # Create A matrix
 A = zeros(Float64,size(ϵ))
 for i in 1:nbody, j in 1:nbody
-    A[i,j] = (ϵ[i,j]*m[j])/(sum_mass(m,i,j,ϵ))
+    A[i,j] = (ϵ[i,j]*m[j])/(Σm(m,i,j,ϵ))
 end
 
 # Computes Kepler's problem
@@ -71,7 +71,7 @@ m = reshape(vcat(elements[:,1])[1:nbody],nbody,1) # put masses into a vector
 # Create A matrix
 A = zeros(Float64,size(ϵ))
 for i in 1:nbody, j in 1:nbody
-    A[i,j] = (ϵ[i,j]*m[j])/(sum_mass(m,i,j,ϵ))
+    A[i,j] = (ϵ[i,j]*m[j])/(Σm(m,i,j,ϵ))
 end
 
 # Computes the Keplerians
@@ -95,8 +95,8 @@ end
 # Create dAdm matrix
 dAdm = zeros(eltype(elements),nbody,nbody,nbody)
 for k in 1:nbody, i in 1:nbody, j in 1:nbody
-    dAdm[i,j,k] = ((kron_del(k,j)*ϵ[i,j])/sum_mass(m,i,j,ϵ)) - 
-    ((kron_del(ϵ[i,j],ϵ[i,k]))*ϵ[i,j]*m[j]/(sum_mass(m,i,j,ϵ)^2))
+    dAdm[i,j,k] = ((δ_(k,j)*ϵ[i,j])/Σm(m,i,j,ϵ)) - 
+    ((δ_(ϵ[i,j],ϵ[i,k]))*ϵ[i,j]*m[j]/(Σm(m,i,j,ϵ)^2))
 end
 
 # Create dAinvdm
@@ -140,17 +140,17 @@ return x,v
 end
 
 # Sums masses in current keplerian
-function sum_mass(masses,i,j,ϵ)
+function Σm(masses,i,j,ϵ)
     m = 0.0
     for l in 1:size(masses)[1]
-        m += masses[l]*kron_del(ϵ[i,j],ϵ[i,l])
+        m += masses[l]*δ_(ϵ[i,j],ϵ[i,l])
     end
     return m
 end
 
 # N x N Kronecker Delta 
-function kron_del(index1::T,index2::T) where {T<:Real}
-    if index1 == index2
+function δ_(i::T,j::T) where {T<:Real}
+    if i == j
         return 1.0
     else
         return 0.0
