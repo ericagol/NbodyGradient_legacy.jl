@@ -1,4 +1,4 @@
-name = "NBodyGradient"
+name = "NbodyGradient"
 uuid = "033b0f64-9c30-11e9-3421-b78534a75d40"
 authors = ["Zach Langford <langfzac@uw.edu>"]
 version = "0.1.0"
