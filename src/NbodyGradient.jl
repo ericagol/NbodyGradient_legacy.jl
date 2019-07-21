@@ -1,4 +1,4 @@
-module NBodyGradient
+module NbodyGradient
 
     #################### Usings ####################
 	
