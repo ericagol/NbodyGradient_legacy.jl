@@ -7,8 +7,8 @@ include("setup_hierarchy.jl")
 function init_nbody(elements::Array{T,2},t0::T,IC::Array{Any,1}) where {T <: Real}
 
 nbody = IC[1]
-rkepler = zeros(Float64,nbody,NDIM)
-rdotkepler = zeros(Float64,nbody,NDIM)
+rkepler = zeros(eltype(t0),nbody,NDIM)
+rdotkepler = zeros(eltype(t0),nbody,NDIM)
 
 ϵ = hierarchy(IC) # Indices matrix
 m = reshape(vcat(elements[:,1])[1:nbody],nbody,1) # put masses into a vector
@@ -41,13 +41,13 @@ end
 Ainv = inv(A)
 
 # Cartesian coordinates
-x = zeros(Float64,NDIM);
+x = zeros(eltype(t0),NDIM);
 x = transpose(*(Ainv,rkepler))
-x = convert(Array{Float64,2},x)
+x = convert(Array{eltype(t0),2},x)
 
-v = zeros(Float64,NDIM)
+v = zeros(eltype(t0),NDIM)
 v = transpose(*(Ainv,rdotkepler))
-v = convert(Array{Float64,2},v)
+v = convert(Array{eltype(t0),2},v)
 
 return x,v
 
