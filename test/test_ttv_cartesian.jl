@@ -15,8 +15,8 @@ tmax = 100.0
 #tmax = 10.0
 
 # Read in initial conditions:
-elements = readdlm("elements.txt",',')
-
+elements = readdlm("elements.txt",',',comments=true)
+IC = [3,"1,1"]
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
 ntt = zeros(Int64,n)
@@ -33,19 +33,19 @@ counta = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
+dq = ttv_elements!(n,t0,h,tmax,elements,IC,tt1,count1,0.0,0,0,rstar)
+dq = ttv_elements!(n,t0,h,tmax,elements,IC,tt1,count1,0.0,0,0,rstar)
+dq = ttv_elements!(n,t0,h,tmax,elements,IC,tt1,count1,0.0,0,0,rstar)
 # Now call with one tenth the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
+dq = ttv_elements!(n,t0,h/10.,tmax,elements,IC,tt2,count2,0.0,0,0,rstar)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdq0 = zeros(n,maximum(ntt),7,n)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,counta,dtdq0,rstar)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,counta,dtdq0,rstar)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,counta,dtdq0,rstar)
+dtdelements = ttv_elements!(n,t0,h,tmax,elements,IC,tt,counta,dtdq0,rstar)
+dtdelements = ttv_elements!(n,t0,h,tmax,elements,IC,tt,counta,dtdq0,rstar)
+dtdelements = ttv_elements!(n,t0,h,tmax,elements,IC,tt,counta,dtdq0,rstar)
 #read(STDIN,Char)
 
 # Check that this is working properly:
@@ -66,9 +66,9 @@ hbig = big(h); t0big = big(t0); tmaxbig=big(tmax); tt2big = big.(tt2); tt3big = 
 for jq=1:n
   for iq=1:7
     elements2  = big.(elements)
-    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elements2,tt2big,count2,dlnq,iq,jq,big(rstar))
+    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elements2,IC,tt2big,count2,dlnq,iq,jq,big(rstar))
     elements3  = big.(elements)
-    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elements3,tt3big,count3,-dlnq,iq,jq,big(rstar))
+    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elements3,IC,tt3big,count3,-dlnq,iq,jq,big(rstar))
     for i=1:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:
@@ -86,13 +86,13 @@ mask = zeros(Bool, size(dtdq0))
 for i=2:n, j=1:counta[i], k=1:7, l=1:n
   if abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l]) > 0.1*abs(dtdq0[i,j,k,l]) && ~(abs(dtdq0[i,j,k,l]) == 0.0  && abs(dtdq0_sum[i,j,k,l]) < 1e-3)
 #    println(i," ",j," ",k," ",l," ",dtdq0[i,j,k,l]," ",dtdq0_sum[i,j,k,l]," ",itdq0[i,j,k,l])
-    nbad +=1
+    global nbad +=1
   end
   diff_dtdq0[i,j,k,l] = abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l])
   if k != 2 && k != 5
     mask[i,j,k,l] = true
   end
-  ntot +=1
+  global ntot +=1
 end
 #println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_sum[mask]./dtdq0[mask]-1.0)))
 println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_sum[mask])-asinh.(dtdq0[mask]))))

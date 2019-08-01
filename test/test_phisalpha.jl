@@ -15,8 +15,9 @@ global t0 = 7257.93115525
 h  = 0.05
 tmax = 600.0
 dlnq = big(1e-15)
+IC = [3,"1,1"]
 
-global elements = readdlm("elements.txt",',')
+global elements = readdlm("elements.txt",',',comments=true)
 elements[2,1] = 1.0
 elements[3,1] = 1.0
 
@@ -43,7 +44,7 @@ for k=1:n
 end
 m0 = copy(m)
 
-x0,v0 = init_nbody(elements,t0,n)
+x0,v0 = init_nbody(elements,t0,IC)
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)

@@ -14,12 +14,13 @@ h  = 0.05
 hbig = big(h)
 tmax = 600.0
 dlnq = big(1e-20)
+IC = [3,"1,1"]
 
 #nstep = 8000
 nstep = 500
 #nstep = 1
 
-elements = readdlm("elements.txt",',')
+elements = readdlm("elements.txt",',',comments=true)
 # Increase mass of inner planets:
 elements[2,1] *= 100.
 elements[3,1] *= 100.
@@ -46,7 +47,7 @@ for k=1:n
 end
 m0 = copy(m)
 
-x0,v0 = init_nbody(elements,t0,n)
+x0,v0 = init_nbody(elements,t0,IC)
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)
