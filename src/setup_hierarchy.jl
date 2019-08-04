@@ -61,6 +61,8 @@ function bottom_level(nbody::Int64,bins::Array{Int64,2},h::Array{Float64},iter::
         for i=1:bins[1]-1
             if !(@isdefined j) || isa(j,Nothing)
                 global j = i
+            elseif (@isdefined j) && i == 1
+                global j = 1
             end
             if (j+3) <= nbody
                 h[i+1,j+2] = -1
