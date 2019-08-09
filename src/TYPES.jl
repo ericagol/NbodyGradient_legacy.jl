@@ -1,4 +1,7 @@
 # Initial Conditions generation
+using DelimitedFiles
+include("/Users/langfzac/Research/NbodyGradient.jl/src/kepler_init.jl")
+include("/Users/langfzac/Research/NbodyGradient.jl/src/setup_hierarchy.jl")
 
 abstract type InitialConditions
 end
@@ -38,11 +41,11 @@ function init_nbody(init::IC,t0::T) where T <: Real
 
     # Cartesian coordinates
     x = zeros(eltype(t0),init.NDIM)
-    x = transpose(*(Ainv,rkepler))
+    x = transpose(*(Ainv,r))
     x = convert(Array{eltype(t0),2},x)
 
     v = zeros(eltype(t0),init.NDIM)
-    v = transpose(*(Ainv,rdotkepler))
+    v = transpose(*(Ainv,rdot))
     v = convert(Array{eltype(t0),2},v)
 
     # Calculate and return mass derivatives if true
@@ -86,7 +89,7 @@ function d_dm(init::IC)
                 jac_init[(i-1)*7+3+j,l] += Ainv[i,k]*jac_kepler[(k-1)*6+3+j,l]
             end
         end
-        
+
         # Derivatives of cartesian coordinates wrt masses
         for k in 1:N
             dxdm = transpose(dAinvdm[:,:,k]*rkepler)
@@ -157,9 +160,11 @@ end
 
 # Simply system test. Need to add other params (GWENT, etc.)
 function test_type()
+    global GNEWT = 39.4845/365.242^2
+    global third = 1.0/3.0
     elements = "test/elements.txt"
-    sys = [4,"2,1"]
-    t0 = 0.0
+    sys = [4,"1,1,1"]
+    t0 = 7257.93115525
     init = IC(elements,sys)
     return init_nbody(init,t0)
 end
