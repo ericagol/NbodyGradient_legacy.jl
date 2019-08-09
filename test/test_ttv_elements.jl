@@ -27,7 +27,7 @@ ntt = zeros(Int64,n)
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
 for i=2:n
-  ntt[i] = ceil(Int64,tmax/elements[i,2])+3
+  global ntt[i] = ceil(Int64,tmax/elements[i,2])+3
 end
 dtdq0 = zeros(n,maximum(ntt),7,n)
 tt  = zeros(n,maximum(ntt))
@@ -57,7 +57,7 @@ for jq=1:n_body
       for k=1:count2[i]
         # Ignore inclination & longitude of nodes variations:
         if iq != 5 && iq != 6 && ~(jq == 1 && iq < 7) && ~(jq == i && iq == 7)
-          mask[i,k,iq,jq] = true
+         global mask[i,k,iq,jq] = true
         end
       end
     end
@@ -109,7 +109,7 @@ dq0 = big(1e-20)
 tt2 = big.(tt2)
 tt3 = big.(tt3)
 t0big = big(t0); tmaxbig = big(tmax); hbig = big(h)
-zero = big(0.0)
+zero_num = big(0.0)
 # Now, compute derivatives numerically:
 for jq=1:n_body
   for iq=1:7
@@ -117,17 +117,17 @@ for jq=1:n_body
 #    dq0 = delement[iq]; if jq==1 && iq==7 ; dq0 = big(1e-10); end  # Vary mass of star by a larger factor
     if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
     elementsbig[jq,ivary] += dq0
-    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,IC,tt2,count2,zero,0,0,big(rstar))
+    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,IC,tt2,count2,zero_num,0,0,big(rstar))
     elementsbig[jq,ivary] -= 2dq0
-    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,IC,tt3,count2,zero,0,0,big(rstar))
+    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,IC,tt3,count2,zero_num,0,0,big(rstar))
     #xm,vm = init_nbody(elements,t0,n_body)
     for i=2:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:
-        dtdelements0_sum[i,k,iq,jq] = (tt2[i,k]-tt3[i,k])/(2.0*dq0)
+        dtdelements0_num[i,k,iq,jq] = (tt2[i,k]-tt3[i,k])/(2.0*dq0)
         # Ignore inclination & longitude of nodes variations:
         if iq != 5 && iq != 6 && ~(jq == 1 && iq < 7) && ~(jq == i && iq == 7)
-          mask[i,k,iq,jq] = true
+          global mask[i,k,iq,jq] = true
         end
       end
     end

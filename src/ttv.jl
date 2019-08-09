@@ -11,7 +11,7 @@ if !@isdefined YEAR
 #const TRANSIT_TOL = 1e-8
 #  const TRANSIT_TOL = 10.*sqrt(eps(1.0))
 #const TRANSIT_TOL = 10.*eps(1.0)
-  const third = 1./3.
+  const third = 1.0/3.0
   const alpha0 = 0.0
 end
 include("kepler_step.jl")
@@ -522,7 +522,7 @@ while t < t0+tmax && param_real
 #        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         # Now, recompute with findtransit3:
         xtransit .= xprior; vtransit .= vprior
-        jac_transit = eye(jac_step)
+	jac_transit = Matrix{eltype(jac_step)}(I,size(jac_step))
         dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
         # Save for posterity:
         tt[i,count[i]]=t+dt
@@ -1540,7 +1540,7 @@ indi = 0; indj = 0
   end
 end
 # Need to set jac_phi to identity before calling this. [ ]
-jac_phi = eye(typeof(h),sevn)
+jac_phi = Matrix{typeof(h)}(I,sevn,sevn)
 phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 @inbounds for i in eachindex(jac_step)
   jac_copy[i] = jac_step[i]
@@ -1843,7 +1843,7 @@ end
 # Looks like we are missing phic here: [ ]  
 # Since I haven't added dqdt to phic yet, for now, set jac_phi equal to identity matrix
 # (since this is commented out within phisalpha):
-jac_phi .= eye(typeof(h),sevn)
+jac_phi .= Matrix{eltype(h)}(I,sevn,sevn)
 phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 # Add in time derivative with respect to prior parameters:
 #BLAS.gemm!('N','N',one,jac_phi,dqdt,one,dqdt_phi)
