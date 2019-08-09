@@ -1,14 +1,14 @@
 using Test
 using DelimitedFiles
 
-#include("../src/init_nbody.jl")
+include("../src/init_nbody.jl")
 
 @testset "init_nbody" begin
 
 elements = readdlm("elements.txt",',',comments=true)
 t0 = 7257.93115525
 
-IC = [4,"1,1,1,1"]
+IC = [4,"1,1,1"]
 n_body = IC[1]
 jac_init     = zeros(Float64,7*n_body,7*n_body)
 jac_init_num = zeros(BigFloat,7*n_body,7*n_body)

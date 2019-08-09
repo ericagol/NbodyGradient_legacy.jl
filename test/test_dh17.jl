@@ -1,4 +1,4 @@
-# Tests the routine dh17 jacobian:
+      # Tests the routine dh17 jacobian2
 
 #include("../src/ttv.jl")
 
@@ -239,7 +239,8 @@ println("Maximum error jac_step:   ",maximum(abs.(jac_step-jac_step_num)))
 println("Maximum diff asinh(jac_step):   ",maximum(abs.(asinh.(jac_step)-asinh.(jac_step_num))))
 
 # Compute dqdt:
-
+# Set a short timestep so that particles will drift:
+h = 0.001; hbig = big(h)
 dqdt = zeros(7*n)
 dqdt_num = zeros(BigFloat,7*n)
 x = copy(x0)
@@ -258,16 +259,15 @@ global mp = big.(m0)
 hbig += 2dq
 dh17!(xp,vp,hbig,mp,n,pair)
 for i=1:n, k=1:3
-  dqdt_num[(i-1)*7+  k] = .5*(xp[k,i]-xm[k,i])/dq
-  dqdt_num[(i-1)*7+3+k] = .5*(vp[k,i]-vm[k,i])/dq
+  dqdt_num[(i-1)*7+  k] = (xp[k,i]-xm[k,i])/dq/2
+  dqdt_num[(i-1)*7+3+k] = (vp[k,i]-vm[k,i])/dq/2
 end
 dqdt_num = convert(Array{Float64,1},dqdt_num)
-jac_step_num = convert(Array{Float64,2},jac_step_num)
-#println("dqdt: ",dqdt," ",dqdt_num," diff: ",dqdt-dqdt_num)
-#println("dqdt-dqdt_num: ",maxabs(dqdt-convert(Array{Float64,1},dqdt_num)))
+println("dqdt: ",dqdt," dqdt_num: ",dqdt_num," diff: ",dqdt-dqdt_num)
+println("dqdt-dqdt_num: ",maxabs(dqdt-convert(Array{Float64,1},dqdt_num)))
 
 #@test isapprox(jac_step,jac_step_num)
 #@test isapprox(jac_step,jac_step_num;norm=maxabs)
 @test isapprox(asinh.(jac_step),asinh.(jac_step_num);norm=maxabs)
-#@test isapprox(dqdt,dqdt_num;norm=maxabs)
+@test isapprox(dqdt,dqdt_num;norm=maxabs)
 end
