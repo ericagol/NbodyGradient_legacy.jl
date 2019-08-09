@@ -1,7 +1,7 @@
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
-#@testset "ttv_elements" begin
+@testset "ttv_elements" begin
 
 # This routine takes derivative of transit times with respect
 # to the initial orbital elements.
@@ -100,7 +100,7 @@ println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq4)-asinh.(dtdq8)
 # Compute derivatives numerically:
 #nq = 15
 # This "summarizes" best numerical derivative:
-dtdelements0_sum = zeros(BigFloat,n,maximum(ntt),7,n)
+dtdelements0_num = zeros(BigFloat,n,maximum(ntt),7,n)
 
 # Compute derivatives with BigFloat for additional precision:
 elements0 = copy(elements)
@@ -134,13 +134,13 @@ for jq=1:n_body
   end
 end
 
-#println("Max diff dtdelements: ",maximum(abs.(dtdelements0[mask]./dtdelements0_sum[mask]-1.0)))
-println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements0_sum[mask]))))
+#println("Max diff dtdelements: ",maximum(abs.(dtdelements0[mask]./dtdelements0_num[mask]-1.0)))
+println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements0_num[mask]))))
 
 #ntot = 0
 #diff_dtdelements0 = zeros(n,maximum(ntt),7,n)
 #for i=1:n, j=1:count[i], k=1:7, l=2:n
-#  diff_dtdelements0[i,j,k,l] = abs(dtdelements0[i,j,k,l]-convert(Float64,dtdelements0_sum[i,j,k,l]))
+#  diff_dtdelements0[i,j,k,l] = abs(dtdelements0[i,j,k,l]-convert(Float64,dtdelements0_num[i,j,k,l]))
 #  ntot +=1
 #end
 
@@ -148,18 +148,18 @@ println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-
 #
 #nderiv = n^2*7*maximum(ntt)
 ##mask[:,:,2,:] = false
-#loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(convert(Array{Float64,4},dtdelements0_sum),nderiv)),".")
+#loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(convert(Array{Float64,4},dtdelements0_num),nderiv)),".")
 #axis([1e-6,1e2,1e-12,1e2])
 #loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(diff_dtdelements0,nderiv)),".")
 #println("Maximum error: ",maximum(diff_dtdelements0))
 
 
 
-#@test isapprox(dtdelements0[mask],dtdelements0_sum[mask];norm=maxabs)
-#@test isapprox(asinh.(dtdelements0[mask]),asinh.(dtdelements0_sum[mask]);norm=maxabs)
+#@test isapprox(dtdelements0[mask],dtdelements0_num[mask];norm=maxabs)
+@test isapprox(asinh.(dtdelements0[mask]),asinh.(dtdelements0_num[mask]);norm=maxabs)
 #unit = ones(dtdelements0[mask])
-#@test isapprox(dtdelements0[mask]./dtdelements0_sum[mask],unit;norm=maxabs)
-#end
+#@test isapprox(dtdelements0[mask]./dtdelements0_num[mask],unit;norm=maxabs)
+end
 
 ## Make a plot of some TTVs:
 #

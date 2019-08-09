@@ -1,3 +1,4 @@
+
 include("../../src/ttv.jl")
 include("/Users/ericagol/Computer/Julia/regress.jl")
 
@@ -8,25 +9,16 @@ using PyPlot
 #n = 8
 n = 3
 n_body = n
-#t0 = 7257.93115525
-#t0 = 7260.0
-# Try a larger value of t0:
-#t0 = 15000.0
-# For some reason changing t0 makes the scalings worse:
-t0 =  -200.0
-# Wow, t0 = 3000.0 makes things *really* bad! Between h0/2 & h0/4, we lost the first transit of the inner planet!
-# I'm looking at how kink in TTVs scales with t0 - it seems fairly stable.
-# t0 =  4000.0  
-# t0 =  3000.0  
+t0 = 7257.93115525
+#t0 =  0.0
 #t0 =  randn()
 #h  = 0.12
 h  = 0.07
 #tmax = 600.0
 #tmax = 800.0
 #tmax = 600.0
-#tmax = 800.0
-#tmax = 2000.0
-tmax = 400.0
+tmax = 700.0
+#tmax = 100.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
@@ -36,11 +28,18 @@ elements = readdlm("elements.txt",',')
 
 ntt = zeros(Int64,n)
 
+pair_input = ones(Bool,n,n)
+pair_input[1,2] = false
+pair_input[1,3] = false
+pair_input[2,1] = false
+pair_input[3,1] = false
+
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
 for i=2:n
   ntt[i] = ceil(Int64,tmax/elements[i,2])+3
 end
+dtdq0 = zeros(n,maximum(ntt),7,n)
 tt  = zeros(n,maximum(ntt))
 tt1 = zeros(n,maximum(ntt))
 tt_save = zeros(5,n,maximum(ntt))
@@ -49,45 +48,44 @@ count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar;fout="test_output_h.txt",iout=10)
+dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar;pair=pair_input)
 tt_save[1,:,:]=tt1
+# Now call with 1/10 the timestep:
+#dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt1,count,0.0,0,0,rstar;pair=pair_input)
 
-
-# Create BigFloat versions of the variables:
-elements_big = convert(Array{BigFloat,2},elements)
-hbig = big(h)
-t0big = big(t0)
-tmaxbig = big(tmax)
-tt1big = big.(tt1)
-rstarbig = big(rstar)
+mask = zeros(Bool, size(dtdq0))
+for jq=1:n_body
+  for iq=1:7
+    if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
+    for i=2:n
+      for k=1:count[i]
+        # Ignore inclination & longitude of nodes variations:
+        if iq != 5 && iq != 6 && ~(jq == 1 && iq < 7) && ~(jq == i && iq == 7)
+          mask[i,k,iq,jq] = true
+        end
+      end
+    end
+  end
+end
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
-dq = ttv_elements!(n,t0,h/2.,tmax,elements,tt1,count,0.0,0,0,rstar;fout="test_output_h2.txt",iout=20)
+dq = ttv_elements!(n,t0,h/2.,tmax,elements,tt1,count,0.0,0,0,rstar;pair=pair_input)
 tt_save[2,:,:]=tt1
-dq = ttv_elements!(n,t0,h/4.,tmax,elements,tt1,count,0.0,0,0,rstar;fout="test_output_h4.txt",iout=40)
+dq = ttv_elements!(n,t0,h/4.,tmax,elements,tt1,count,0.0,0,0,rstar;pair=pair_input)
 tt_save[3,:,:]=tt1
-dq = ttv_elements!(n,t0,h/8.,tmax,elements,tt1,count,0.0,0,0,rstar;fout="test_output_h8.txt",iout=80)
+dq = ttv_elements!(n,t0,h/8.,tmax,elements,tt1,count,0.0,0,0,rstar;pair=pair_input)
 tt_save[4,:,:]=tt1
-#dqbig = ttv_elements!(n,t0big,hbig/8,tmaxbig,elements_big,tt1big,count,big(0.0),0,0,rstarbig)
-#tt_save[4,:,:]=convert(Array{Float64,2},tt1big)
-
-#dq = ttv_elements!(n,t0,h/16.,tmax,elements,tt1,count,0.0,0,0,rstar)
-dq = ttv_elements!(n,t0,h/16.,tmax,elements,tt1,count,0.0,0,0,rstar;fout="test_output_h16.txt",iout=160)
+dq = ttv_elements!(n,t0,h/16.,tmax,elements,tt1,count,0.0,0,0,rstar;pair=pair_input)
 tt_save[5,:,:]=tt1
-# Compute the h/16 case in BigFloat precision:
-#dqbig = ttv_elements!(n,t0big,hbig/16,tmaxbig,elements_big,tt1big,count,big(0.0),0,0,rstarbig)
-#tt_save[5,:,:]=convert(Array{Float64,2},tt1big)
-
 
 # Make a plot of transit time errors versus stepsize:
 ntrans = sum(count)
 clf()
-sigt = zeros(n-1,4)
+sigt = zeros(n-1,5)
 tab = 0
-#h_list = [h,h/2.,h/4.,h/8.]
-h_list = [h,h/2.,h/4.,h/8]
-hlabel = ["h-h/16","h/2-h/16","h/4-h/16","h/8-h/16"]
-ch = ["black","red","green","blue"]
+h_list = [h,h/2.,h/4.,h/8.,h/8]
+hlabel = ["h-h/16","h/2-h/16","h/4-h/16","h/8-h/16","h/16-big(h/16)"]
+ch = ["black","red","green","blue","orange"]
 for i=2:n
   for j=1:4
     tti1 = tt_save[j,i,1:count[i]]
@@ -110,12 +108,11 @@ read(STDIN,Char)
 # Make a plot of timing errors versus stepsize:
 ntrans = sum(count)
 clf()
-sigt = zeros(n-1,4)
+sigt = zeros(n-1,5)
 tab = 0
-#h_list = [h,h/2.,h/4.,h/8.]
-h_list = [h,h/2.,h/4.,h/8]
-hlabel = ["h-h/16","h/2-h/16","h/4-h/16","h/8-h/16"]
-ch = ["black","red","green","blue"]
+h_list = [h,h/2.,h/4.,h/8.,h/8]
+hlabel = ["h-h/16","h/2-h/16","h/4-h/16","h/8-h/16","h/16-big(h/16)"]
+ch = ["black","red","green","blue","orange"]
 for i=2:n
   fn = zeros(Float64,2,count[i])
   sig = ones(count[i])
@@ -151,17 +148,4 @@ legend(loc = "upper left")
 ylabel("RMS timing error [sec]")
 xlabel("Step size [day]")
 
-PyPlot.savefig("timing_error_vs_h.pdf",bbox_inches="tight")
-read(STDIN,Char)
-
-clf()
-# Plot differences across phase space positions:
-data1 = readdlm("test_output_h.txt");
-data2 = readdlm("test_output_h2.txt");
-data4 = readdlm("test_output_h4.txt");
-data8 = readdlm("test_output_h8.txt");
-data16 = readdlm("test_output_h16.txt");
-
-for i=8:16
-  plot(data1[:,1],data2[:, i]-data8[:,i],".")
-end
+PyPlot.savefig("timing_error_vs_h_pair.pdf",bbox_inches="tight")

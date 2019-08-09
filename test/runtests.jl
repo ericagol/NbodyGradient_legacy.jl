@@ -11,8 +11,6 @@ include("test_keplerij.jl")
 include("test_kickfast.jl")
 include("test_phisalpha.jl")
 include("test_dh17.jl")
-
-# Not working
-#include("test_findtransit2.jl")
+include("test_findtransit3.jl")
 include("test_ttv_cartesian.jl")
 include("test_ttv_elements.jl")

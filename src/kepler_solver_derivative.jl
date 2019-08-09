@@ -70,8 +70,10 @@ s0 = copy(s)
 y = zero; yp = one
 iter = 0
 ds = Inf
+#KEPLER_TOL = sqrt(eps(one))
 KEPLER_TOL = sqrt(eps(h))
-while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
+ITMAX = 20
+while iter == 0 || (abs(ds) > KEPLER_TOL && iter < ITMAX)
   xx = sqb*s
   if beta0 > 0
     sx = sin(xx); cx = cos(xx)
@@ -90,6 +92,9 @@ while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   ds = calc_ds_opt(y,yp,ypp,yppp)
   s += ds
   iter +=1
+end
+if iter == ITMAX
+  println("Reached max iterations in solve_kepler: h ",h," s0: ",s0," s: ",s," ds: ",ds)
 end
 #println("sguess: ",sguess," s: ",s," s-sguess: ",s-sguess," ds: ",ds," iter: ",iter)
 # Since we updated s, need to recompute:
