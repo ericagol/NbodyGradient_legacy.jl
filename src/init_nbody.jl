@@ -7,14 +7,14 @@ include("setup_hierarchy.jl")
 function init_nbody(elements::Array{T,2},t0::T,IC::Array{Any,1}) where {T <: Real}
 
 nbody = IC[1]
-rkepler = zeros(eltype(t0),nbody,NDIM)
-rdotkepler = zeros(eltype(t0),nbody,NDIM)
+rkepler = zeros(typeof(t0),nbody,NDIM)
+rdotkepler = zeros(typeof(t0),nbody,NDIM)
 
 ϵ = hierarchy(IC) # Indices matrix
 m = reshape(vcat(elements[:,1])[1:nbody],nbody,1) # put masses into a vector
 
 # Create A matrix
-A = zeros(Float64,size(ϵ))
+A = zeros(typeof(t0),size(ϵ))
 for i in 1:nbody, j in 1:nbody
     A[i,j] = (ϵ[i,j]*m[j])/(Σm(m,i,j,ϵ))
 end
@@ -73,7 +73,6 @@ A = zeros(Float64,size(ϵ))
 for i in 1:nbody, j in 1:nbody
     A[i,j] = (ϵ[i,j]*m[j])/(Σm(m,i,j,ϵ))
 end
-
 # Computes the Keplerians
 for i in 1:nbody
     
@@ -81,15 +80,27 @@ for i in 1:nbody
     ind2 = findall(isequal(1.0),ϵ[i,:])
     m1 = sum(m[ind1])
     m2 = sum(m[ind2])
-
+    
     if i < nbody
-        r, rdot = kepler_init(t0,m1+m2,elements[i+1,2:7])
-        for j=1:3
+        # Computes Kepler's problem
+	r, rdot = kepler_init(t0,m1+m2,elements[i+1,2:7],jac_21)
+	for j=1:3
             rkepler[i,j] = r[j]
             rdotkepler[i,j] = rdot[j]
         end
+	# Save Keplerian Jacobian to a matrix. First, postitions/velocities vs. elements
+	for j=1:6, k=1:6
+	    jac_kepler[(i-1)*6+j,i*7+k] = jac_21[j,k]
+	end
+	# Then mass derivatives
+	for j=1:nbody
+	    if ϵ[i,j] != 0
+	        for k = 1:6
+		    jac_kepler[(i-1)*6+k,j*7] = jac_21[k,7]
+		end
+	    end
+	end
     end
-    
 end
 
 # Create dAdm matrix
@@ -119,6 +130,7 @@ v = convert(Array{Float64,2},v)
 dxdm = zeros(Float64,NDIM,nbody)
 dvdm = zeros(Float64,NDIM,nbody)
 
+# Fill in jac_init
 for i=1:nbody
   for k=1:nbody
     for j=1:3, l=1:7*nbody
@@ -140,8 +152,8 @@ return x,v
 end
 
 # Sums masses in current keplerian
-function Σm(masses,i,j,ϵ)
-    m = 0.0
+function Σm(masses::Array{T,2},i::Integer,j::Integer,ϵ::Array{Float64,2}) where T<:Real
+	m = zero(eltype(masses))
     for l in 1:size(masses)[1]
         m += masses[l]*δ_(ϵ[i,j],ϵ[i,l])
     end

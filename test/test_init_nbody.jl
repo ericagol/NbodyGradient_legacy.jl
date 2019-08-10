@@ -12,18 +12,16 @@ IC = [4,"1,1,1"]
 n_body = IC[1]
 jac_init     = zeros(Float64,7*n_body,7*n_body)
 jac_init_num = zeros(BigFloat,7*n_body,7*n_body)
-global x,v = init_nbody(elements,t0,IC,jac_init)
+x,v = init_nbody(elements,t0,IC,jac_init)
 elements0 = copy(elements)
 #dq = big.([1e-10,1e-5,1e-6,1e-6,1e-6,1e-5,1e-5])
-q = [1e-10,1e-8,1e-8,1e-8,1e-8,1e-8,1e-8]
-dq = BigFloat.(["$i" for i in q],RoundUp)
-
+dq = big.([1e-10,1e-8,1e-8,1e-8,1e-8,1e-8,1e-8])
 #dq = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
-t0big = BigFloat("$t0",RoundUp)
-elementsbig = BigFloat.(["$i" for i in elements0],RoundUp)
+t0big = big(t0)
 # Now, compute derivatives numerically:
 for j=1:n_body
   for k=1:7
+    elementsbig = big.(elements0)
     dq0 = dq[k]; if j==1 && k==1 ; dq0 = big(1e-15); end
     elementsbig[j,k] += dq0
     xp,vp = init_nbody(elementsbig,t0big,IC)
@@ -55,7 +53,7 @@ end
 println("Maximum jac_init-jac_init_num: ",maximum(abs.(jac_init-jac_init_num)))
 #println("Maximum jac_init-jac_init_num: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_num))))
 #@test isapprox(jac_init_num,jac_init)
-println("JAC_INIT: ",findall(isequal(-Inf),jac_init[:]))
-println("JAC_INIT_NUM:",findall(isequal(-Inf),jac_init_num[:]))
+#println("JAC_INIT: ",findall(isequal(-Inf),jac_init[:]))
+#println("JAC_INIT_NUM:",findall(isequal(-Inf),jac_init_num[:]))
 @test isapprox(jac_init_num,jac_init;norm=maxabs)
 end
