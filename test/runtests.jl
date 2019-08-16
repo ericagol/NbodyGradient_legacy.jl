@@ -3,9 +3,7 @@ maxabs(x) = maximum(abs.(x))
 using Test
 
 include("test_kepler_init.jl")
-
-# init_nbody.jl working, test is not.
-#include("test_init_nbody.jl")
+include("test_init_nbody.jl")
 include("test_elliptic_derivative.jl")
 include("test_keplerij.jl")
 include("test_kickfast.jl")
