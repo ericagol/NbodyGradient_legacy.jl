@@ -1,17 +1,19 @@
 module NbodyGradient
 
     #################### Usings ####################
-	
+
 		using DelimitedFiles
 		using Distributed
 		using ForwardDiff
 		using LinearAlgebra
 		using Test
+		using Statistics
 
     ################### Includes ###################
-	
-		include("g3.jl")
+
+	    include("types.jl")
 		include("init_nbody.jl")
+		include("g3.jl")
 		include("kepler.jl")
 		include("kepler_drift_solver.jl")
 		include("kepler_drift_step.jl")
@@ -23,8 +25,8 @@ module NbodyGradient
 
 	################### Exports ###################
 
-		export ttv_elements!, ttv!
-		export findtransit2!, findtransit3!
-		export init_nbody, hierarchy
+		export
+		InitialConditions, IC, init_nbody,
+		kepler_init, ttv_elements!, ttv!
 
 end
