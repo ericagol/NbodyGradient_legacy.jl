@@ -1,6 +1,7 @@
-include("../src/ttv.jl")
-maxabs(x) = maximum(abs.(x))
+using NbodyGradient
 using Test
+
+maxabs(x) = maximum(abs.(x))
 
 include("test_kepler_init.jl")
 include("test_init_nbody.jl")
