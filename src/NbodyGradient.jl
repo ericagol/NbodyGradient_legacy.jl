@@ -27,6 +27,8 @@ module NbodyGradient
 
 		export
 		InitialConditions, IC, init_nbody,
-		kepler_init, ttv_elements!, ttv!
+		kepler_init, ttv_elements!, ttv!,
+		kep_ell_hyp!, keplerij!, dh17!,
+		kickfast!, phisalpha!, ah18!
 
 end
