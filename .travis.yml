@@ -1,6 +1,21 @@
 language: julia
+os:
+  - linux
+  - osx
 julia:
   - nightly
   - 1.1
   - 1.0
   - 0.7
+notifications:
+  email: false
+
+# Status will not show "failing" if nightly julia build fails.
+matrix:
+  allow_failures:
+  - julia: nightly
+
+# Deploy documentation if builds are successful
+after_success:
+  - julia -e 'Pkg.add("Documenter")'
+  - julia -e 'cd(Pkg.dir("NbodyGradient")); include(joinpath("docs", make.jl))'
