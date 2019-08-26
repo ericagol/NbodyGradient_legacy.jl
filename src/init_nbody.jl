@@ -26,13 +26,11 @@ function init_nbody(init::IC,t0::T) where T <: Real
     Ainv = inv(init.amat)
 
     # Cartesian coordinates
-    x = zeros(eltype(t0),init.NDIM)
-    x = transpose(*(Ainv,r))
-    x = convert(Array{eltype(t0),2},x)
-
-    v = zeros(eltype(t0),init.NDIM)
-    v = transpose(*(Ainv,rdot))
-    v = convert(Array{eltype(t0),2},v)
+    x = zeros(eltype(t0),init.NDIM,init.nbody)
+    x = Array(transpose(*(Ainv,r)))
+    
+    v = zeros(eltype(t0),init.NDIM,init.nbody)
+    v = Array(transpose(*(Ainv,rdot)))
 
     # Calculate and return mass derivatives if true
     if init.derivatives

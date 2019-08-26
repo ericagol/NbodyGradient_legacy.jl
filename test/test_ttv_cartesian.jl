@@ -95,7 +95,7 @@ println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_sum[mask])-asinh.(dt
 #unit = ones(dtdq0[mask])
 #@test isapprox(dtdq0[mask]./convert(Array{Float64,4},dtdq0_sum)[mask],unit;norm=maxabs)
 #@test isapprox(dtdq0[mask],convert(Array{Float64,4},dtdq0_sum)[mask];norm=maxabs)
-@test_broken isapprox(asinh.(dtdq0[mask]),asinh.(dtdq0_sum[mask]);norm=maxabs)
+@test isapprox(asinh.(dtdq0[mask]),asinh.(dtdq0_sum[mask]);norm=maxabs)
 end
 
 #using PyPlot

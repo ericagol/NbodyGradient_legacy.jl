@@ -64,6 +64,7 @@ for jq=1:n_body
 end
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
+dtdelements0 = zeros(n,maximum(ntt),7,n)
 dtdelements0 = ttv_elements!(init,t0,h,tmax,tt,count,dtdq0,rstar)
 dtdq2 = zeros(n,maximum(ntt),7,n)
 dtdelements2 = zeros(n,maximum(ntt),7,n)
@@ -111,9 +112,15 @@ for jq=1:n_body
     initbig = IC(elements,system;prec=BigFloat)
 #    dq0 = delement[iq]; if jq==1 && iq==7 ; dq0 = big(1e-10); end  # Vary mass of star by a larger factor
     if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
+    if ivary==1
+	initbig.m[jq] += dq0
+    end
     initbig.elements[jq,ivary] += dq0
     dq_plus = ttv_elements!(initbig,t0big,hbig,tmaxbig,tt2,count2,zero_num,0,0,big(rstar))
-    initbig.elements[jq,ivary] -= 2dq0
+    if ivary==1
+	initbig.m[jq] -= 2*dq0
+    end
+    initbig.elements[jq,ivary] -= 2*dq0
     dq_minus = ttv_elements!(initbig,t0big,hbig,tmaxbig,tt3,count2,zero_num,0,0,big(rstar))
     #xm,vm = init_nbody(elements,t0,n_body)
     for i=2:n
@@ -151,7 +158,7 @@ println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-
 
 
 #@test isapprox(dtdelements0[mask],dtdelements0_num[mask];norm=maxabs)
-@test_broken isapprox(asinh.(dtdelements0[mask]),asinh.(dtdelements0_num[mask]);norm=maxabs)
+@test isapprox(asinh.(dtdelements0[mask]),asinh.(dtdelements0_num[mask]);norm=maxabs)
 #unit = ones(dtdelements0[mask])
 #@test isapprox(dtdelements0[mask]./dtdelements0_num[mask],unit;norm=maxabs)
 end

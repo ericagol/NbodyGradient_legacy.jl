@@ -1,4 +1,3 @@
-
 @testset "findtransit3" begin
 
 #n = 8
@@ -15,8 +14,8 @@ system = [3,1,1]
 elements = "elements.txt"
 init = IC(elements,system)
 # Increase masses for debugging:
-init.elements[2,1] *= 10.0
-init.elements[3,1] *= 10.0
+init.m[2] *= 10.0
+init.m[3] *= 10.0
 
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:

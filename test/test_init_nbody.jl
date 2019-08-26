@@ -1,4 +1,4 @@
-@testset "init_nbody" begin
+#@testset "init_nbody" begin
 
 elements = "elements.txt"
 t0 = 7257.93115525
@@ -15,11 +15,20 @@ t0big = big(t0)
 # Now, compute derivatives numerically:
 for j=1:n_body
   for k=1:7
-    initbig = IC(elements,system;prec=BigFloat,der=false)
-    dq0 = dq[k]; if j==1 && k==1 ; dq0 = big(1e-15); end
+    initbig = IC(elements,system;prec=BigFloat)
+    dq0 = dq[k]
+    if j==1 && k==1
+    	dq0 = big(1e-15)
+    end
+    if k==1
+	initbig.m[j] += dq0
+    end
     initbig.elements[j,k] += dq0
     xp,vp = init_nbody(initbig,t0big)
-    initbig.elements[j,k] -= 2dq0
+    if k==1
+	initbig.m[j] -= 2*dq0
+    end
+    initbig.elements[j,k] -= 2*dq0
     xm,vm = init_nbody(initbig,t0big)
     for l=1:n_body, p=1:3
       i1 = (l-1)*7+p
@@ -28,15 +37,15 @@ for j=1:n_body
       else
         j1 = (j-1)*7+k-1
       end
-      jac_init_num[i1,  j1] = (xp[p,l]-xm[p,l])/dq0*.5
+      jac_init_num[i1,  j1] = (xp[p,l]-xm[p,l])/dq0*0.5
       jac1 = jac_init[i1,j1]; jac2 = jac_init_num[i1,j1]
       if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
-        println(l," ",p," ",j," ",k," ",jac_init_num[i1,j1]," ",jac_init[i1,j1]," ",jac_init_num[i1,j1]/jac_init[i1,j1])
+        println("Condition 1: ",l," ",p," ",j," ",k," ",jac_init_num[i1,j1]," ",jac_init[i1,j1]," ",jac_init_num[i1,j1]/jac_init[i1,j1])
       end
-      jac_init_num[i1+3,j1] = (vp[p,l]-vm[p,l])/dq0*.5
+      jac_init_num[i1+3,j1] = (vp[p,l]-vm[p,l])/dq0*0.5
       jac1 = jac_init[i1+3,j1]; jac2 = jac_init_num[i1+3,j1]
       if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
-        println(l," ",p+3," ",j," ",k," ",jac_init_num[i1+3,j1]," ",jac_init[i1+3,j1]," ",jac_init_num[i1+3,j1]/jac_init[i1+3,j1])
+        println("Condition 2: ",l," ",p+3," ",j," ",k," ",jac_init_num[i1+3,j1]," ",jac_init[i1+3,j1]," ",jac_init_num[i1+3,j1]/jac_init[i1+3,j1])
       end
     end
   end
@@ -44,10 +53,10 @@ for j=1:n_body
 end
 #jac_init_num = convert(Array{Float64,2},jac_init_num)
 
-println("Maximum jac_init-jac_init_num: ",maximum(abs.(jac_init-jac_init_num)))
+#println("Maximum jac_init-jac_init_num: ",maximum(abs.(jac_init-jac_init_num)))
 #println("Maximum jac_init-jac_init_num: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_num))))
 #@test isapprox(jac_init_num,jac_init)
 #println("JAC_INIT: ",findall(isequal(-Inf),jac_init[:]))
 #println("JAC_INIT_NUM:",findall(isequal(-Inf),jac_init_num[:]))
-@test_broken isapprox(jac_init_num,jac_init;norm=maxabs)
-end
+#@test isapprox(jac_init_num,jac_init;norm=maxabs)
+#end
