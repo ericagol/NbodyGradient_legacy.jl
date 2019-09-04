@@ -82,13 +82,13 @@ mask = zeros(Bool, size(dtdq0))
 for i=2:n, j=1:counta[i], k=1:7, l=1:n
   if abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l]) > 0.1*abs(dtdq0[i,j,k,l]) && ~(abs(dtdq0[i,j,k,l]) == 0.0  && abs(dtdq0_sum[i,j,k,l]) < 1e-3)
 #    println(i," ",j," ",k," ",l," ",dtdq0[i,j,k,l]," ",dtdq0_sum[i,j,k,l]," ",itdq0[i,j,k,l])
-    global nbad +=1
+    nbad +=1
   end
   diff_dtdq0[i,j,k,l] = abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l])
   if k != 2 && k != 5
     mask[i,j,k,l] = true
   end
-  global ntot +=1
+  ntot +=1
 end
 #println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_sum[mask]./dtdq0[mask]-1.0)))
 println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_sum[mask])-asinh.(dtdq0[mask]))))
