@@ -50,7 +50,9 @@ mutable struct IC{T} <: InitialConditions
         elements = convert(Array{prec},readdlm(filename,',',comments=true))
         nbody = system[1]
         m = reshape(vcat(elements[:,1])[1:nbody],nbody,1)
-        amat = amatrix(elements,ϵ,m)
+        amat = amatrix(ϵ,m)
         return new{prec}(elements,ϵ,amat,der,NDIM,nbody,m)
     end
 end
+
+

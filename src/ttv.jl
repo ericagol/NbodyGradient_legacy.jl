@@ -18,6 +18,18 @@ include("kepler_step.jl")
 include("kepler_drift_step.jl")
 include("init_nbody.jl")
 
+function comp_sum(sum_value::T,sum_error::T,addend::T) where {T <: Real}
+	#  Function for compensated summation using the Kahan (1965) algorithm.
+	#  sum_value:  current value of the sum
+	#  sum_error:  truncation/rounding error accumulated from prior steps in sum
+	#  addend:     new value to be added to the sum
+	sum_error += addend
+	tmp = sum_value + sum_error
+	sum_error = (sum_value - tmp) + sum_error
+	sum_value = tmp
+	return sum_value::T,sum_error::T
+end
+
 # These "constants" pre-allocate memory for matrices used in the derivative computation (to save time with allocation and garbage collection):
 if !@isdefined pxpr0
   const pxpr0 = zeros(Float64,3);const  pxpa0=zeros(Float64,3);const  pxpk=zeros(Float64,3);const  pxps=zeros(Float64,3);const  pxpbeta=zeros(Float64,3)
@@ -60,6 +72,7 @@ dq = 0.0
 if iq == 7 && dlnq != 0.0
   dq = init.m[jq]*dlnq
   init.m[jq] += dq
+  amatrix(init)
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
 x,v = init_nbody(init,t0)
@@ -229,14 +242,14 @@ for i=2:n
   gsave[i]= g!(i,1,x,v)
 end
 # Loop over time steps:
-dt::Float64 = 0.0
+dt = 0.0
 gi = 0.0
 ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(init.m))
 while t < (t0+tmax) && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,h,init.m,n,jac_step,pair)
-  #dh17!(x,v,h,m,n,jac_step,pair)
+  #ah18!(x,v,h,init.m,n,jac_step,pair)
+  dh17!(x,v,h,init.m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(init.m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
@@ -269,8 +282,9 @@ while t < (t0+tmax) && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -347,8 +361,9 @@ while t < t0+tmax && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -426,8 +441,9 @@ while t < t0+tmax && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -563,8 +579,9 @@ while t < t0+tmax && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -644,8 +661,9 @@ while t < t0+tmax && param_real
     writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
   end
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1

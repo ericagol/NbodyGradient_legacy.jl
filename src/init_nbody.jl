@@ -173,7 +173,7 @@ Creates the A matrix presented in Hamers & Portegies Zwart 2016 (HPZ16).
 # Outputs
 - `A::Array{<:Real,2}`: A matrix.
 """
-function amatrix(elements::Array{T,2},ϵ::Array{T,2},m::Array{T,2}) where T<:Real
+function amatrix(ϵ::Array{T,2},m::Array{T,2}) where T<:Real
     A = zeros(eltype(ϵ),size(ϵ)) # Empty A matrix
     N = length(ϵ[:,1]) # Number of bodies in system
 
@@ -181,6 +181,10 @@ function amatrix(elements::Array{T,2},ϵ::Array{T,2},m::Array{T,2}) where T<:Rea
         A[i,j] = (ϵ[i,j]*m[j])/(Σm(m,i,j,ϵ))
     end
     return A
+end
+
+function amatrix(init::IC)
+    init.amat = amatrix(init.ϵ,init.m)
 end
 
 """
