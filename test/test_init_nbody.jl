@@ -1,4 +1,4 @@
-#@testset "init_nbody" begin
+@testset "init_nbody" begin
 
 elements = "elements.txt"
 t0 = 7257.93115525
@@ -21,12 +21,14 @@ for j=1:n_body
     	dq0 = big(1e-15)
     end
     if k==1
-	initbig.m[j] += dq0
+	    initbig.m[j] += dq0
+        amatrix(initbig)
     end
     initbig.elements[j,k] += dq0
     xp,vp = init_nbody(initbig,t0big)
     if k==1
 	initbig.m[j] -= 2*dq0
+    amatrix(initbig)
     end
     initbig.elements[j,k] -= 2*dq0
     xm,vm = init_nbody(initbig,t0big)
@@ -58,5 +60,5 @@ end
 #@test isapprox(jac_init_num,jac_init)
 #println("JAC_INIT: ",findall(isequal(-Inf),jac_init[:]))
 #println("JAC_INIT_NUM:",findall(isequal(-Inf),jac_init_num[:]))
-#@test isapprox(jac_init_num,jac_init;norm=maxabs)
-#end
+@test isapprox(jac_init_num,jac_init;norm=maxabs)
+end

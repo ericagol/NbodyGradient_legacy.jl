@@ -114,11 +114,13 @@ for jq=1:n_body
     if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
     if ivary==1
 	initbig.m[jq] += dq0
+    amatrix(initbig)
     end
     initbig.elements[jq,ivary] += dq0
     dq_plus = ttv_elements!(initbig,t0big,hbig,tmaxbig,tt2,count2,zero_num,0,0,big(rstar))
     if ivary==1
 	initbig.m[jq] -= 2*dq0
+    amatrix(initbig)
     end
     initbig.elements[jq,ivary] -= 2*dq0
     dq_minus = ttv_elements!(initbig,t0big,hbig,tmaxbig,tt3,count2,zero_num,0,0,big(rstar))
