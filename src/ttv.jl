@@ -65,6 +65,8 @@ function ttv_elements!(init::IC,t0::T,h::T,tmax::T,tt::Array{T,2},count::Array{I
 fill!(tt,0.0)
 # Counter for transits of each planet:
 fill!(count,0)
+# Initialize the N-body problem using nest hierarchy of Keplerians:
+x,v = init_nbody(init,t0)
 # Insert masses from the elements array:
 # Allow for perturbations to initial conditions: jq labels body; iq labels phase-space element (or mass)
 # iq labels phase-space element (1-3: x; 4-6: v; 7: m)
@@ -74,8 +76,6 @@ if iq == 7 && dlnq != 0.0
   init.m[jq] += dq
   amatrix(init)
 end
-# Initialize the N-body problem using nested hierarchy of Keplerians:
-x,v = init_nbody(init,t0)
 #elements_big=big.(elements); t0big = big(t0)
 #xbig,vbig = init_nbody(elements_big,t0big,n)
 #x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig)
@@ -242,14 +242,14 @@ for i=2:n
   gsave[i]= g!(i,1,x,v)
 end
 # Loop over time steps:
-dt = 0.0
+dt::Float64 = 0.0
 gi = 0.0
 ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(init.m))
 while t < (t0+tmax) && param_real
   # Carry out a dh17 mapping step:
-  #ah18!(x,v,h,init.m,n,jac_step,pair)
-  dh17!(x,v,h,init.m,n,jac_step,pair)
+  ah18!(x,v,h,init.m,n,jac_step,pair)
+  #dh17!(x,v,h,init.m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(init.m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
