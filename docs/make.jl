@@ -15,7 +15,7 @@ makedocs(
 
 deploydocs(
     repo = "github.com/ericagol/NbodyGradient.jl.git",
-	target = "build"
+	target = "build",
 	deps = nothing,
 	make = nothing
 )

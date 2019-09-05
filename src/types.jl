@@ -29,7 +29,7 @@ Structure for holding the initial conditions of a nested hierarchical system.
 The following uses the inner constructor to create an IC type for a simple system of 4 bodies in concentric orbits.
 ```julia
 filename = "/my/path/to/elements.txt" # File containing orbital elements and masses
-system = [4,1,1,1] # Example system array syntax. 4 bodies in concetric orbits.
+system = [4,1,1,1] # Example system array syntax. 4 bodies in concentric orbits.
 init = IC(filename,system)
 ```
 """
