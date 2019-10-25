@@ -10,11 +10,12 @@ global t0 = 7257.93115525
 h  = 0.05
 tmax = 600.0
 dlnq = big(1e-15)
-IC = [3,"1,1"]
+system = [3,1,1]
 
-elements = readdlm("elements.txt",',',comments=true)
-elements[2,1] = 1.0
-elements[3,1] = 1.0
+elements = "elements.txt"
+init = IC(elements,system;der=false)
+init.elements[2,1] = 1.0
+init.elements[3,1] = 1.0
 
 m =zeros(n)
 x0=zeros(3,n)
@@ -31,12 +32,10 @@ end
 
 jac_step = zeros(7*n,7*n)
 
-for k=1:n
-  m[k] = elements[k,1]
-end
+m = init.m
 m0 = copy(m)
 
-x0,v0 = init_nbody(elements,t0,IC)
+x0,v0 = init_nbody(init,t0)
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)

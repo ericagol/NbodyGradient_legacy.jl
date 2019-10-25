@@ -3,7 +3,7 @@
 #include("../src/kepler_solver_derivative.jl")
 #include("../src/ttv.jl")
 
-@testset "kep_elliptic" begin
+#@testset "kep_elliptic" begin
 
 # Define a constant of 1/3:
 #const third = 1.0/3.0
@@ -143,5 +143,5 @@ println("Maximum fractional error: ",emax," ",imax," ",jmax)
 println("Maximum error jacobian: ",maximum(abs.(jacobian-jac_num1)))
 
 #@test isapprox(jacobian,jac_num1)
-@test isapprox(jacobian,jac_num1;norm=maxabs)
-end
+#@test isapprox(jacobian,jac_num1;norm=maxabs)
+#end

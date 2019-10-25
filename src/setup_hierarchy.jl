@@ -1,40 +1,17 @@
-# Dependencies
-using DelimitedFiles
-using Distributed
+# Functions to generate ϵ matrix.
 
 ################################################################################
 # Sets up planetary-hierarchy index matrix using an initial condition file
 # of the form "test.txt" (included in "test/" directory), or in a 2d array of
 # the form file = [x ; "x,y,z,..."] where x,y,z are Int64
 ################################################################################
-function hierarchy(file::String)
-    # Reads in a separates the file into variables
-    file = readdlm(file, dims=(2,2))
-    nbody = file[1,2]
-    bins = file[2,2]
-    bins = replace(bins,"," => " ")
-    bins = readdlm(IOBuffer(bins),Int64)
-    level = length(bins)
-
-    # checks that the hierarchy can be created
-    @assert bins[1] <= nbody/2 && bins[1] <= 2^level
-
-    # Creates an empty array of the proper size
-    h = zeros(Float64,nbody,nbody)
-
-    # Starts filling the array and returns it
-    bottom_level(nbody,bins,h,1)
-    h[end,1:end] .= -1
-    return h
-end
-
-function hierarchy(file::Array{Any,1})
+function hierarchy(file::Array{Int64,1})
 
     # Separates the initial array into variables
     nbody = file[1]
-    bins = file[2]
-    bins = replace(bins,"," => " ")
-    bins = readdlm(IOBuffer(bins),Int64)
+    bins = file[2:end]
+    #bins = replace(bins,"," => " ")
+    #bins = readdlm(IOBuffer(bins),Int64)
     level = length(bins)
 
     # checks that the hierarchy can be created
@@ -42,7 +19,6 @@ function hierarchy(file::Array{Any,1})
 
     # Creates an empty array of the proper size
     h = zeros(Float64,nbody,nbody)
-
     # Starts filling the array and returns it
     bottom_level(nbody,bins,h,1)
     h[end,1:end] .= -1
@@ -52,7 +28,7 @@ end
 ################################################################################
 # Sets up the first level of the hierchary.
 ################################################################################
-function bottom_level(nbody::Int64,bins::Array{Int64,2},h::Array{Float64},iter::Int64)
+function bottom_level(nbody::Int64,bins::Array{Int64,1},h::Array{Float64},iter::Int64)
 
     # Fills the very first level of the hierarchy and iterates related variables
     h[1,1] = -1.0
@@ -91,7 +67,7 @@ end
 # *** Only works for hierarchies with a max binaries per level of 2 (unless
 # symmetric). ***
 ################################################################################
-function nlevel(nbody::Int64,bodies::Int64,bins::Array{Int64,2},binsp::Int64,row::Int64,h::Array{Float64},iter::Int64)
+function nlevel(nbody::Int64,bodies::Int64,bins::Array{Int64,1},binsp::Int64,row::Int64,h::Array{Float64},iter::Int64)
 #print("nbody: ", nbody, "\n")
 #print("bodies: ", bodies, "\n")
 #print("row: ", row, "\n")
@@ -171,7 +147,7 @@ end
 # Called if the hierarchy is symmetric (or if the hierarchy has all of the
 # bodies on the bottom level). Fills the remaining rows.
 ################################################################################
-function symmetric(nbody::Int64,bodies::Int64,bins::Array{Int64,2},binsp::Int64,row::Int64,h::Array{Float64},iter::Int64)
+function symmetric(nbody::Int64,bodies::Int64,bins::Array{Int64,1},binsp::Int64,row::Int64,h::Array{Float64},iter::Int64)
     global j = 0
     while row < nbody-1
         h[row,1+j:2+j] .= -1

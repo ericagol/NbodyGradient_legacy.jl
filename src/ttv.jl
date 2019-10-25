@@ -18,6 +18,18 @@ include("kepler_step.jl")
 include("kepler_drift_step.jl")
 include("init_nbody.jl")
 
+function comp_sum(sum_value::T,sum_error::T,addend::T) where {T <: Real}
+	#  Function for compensated summation using the Kahan (1965) algorithm.
+	#  sum_value:  current value of the sum
+	#  sum_error:  truncation/rounding error accumulated from prior steps in sum
+	#  addend:     new value to be added to the sum
+	sum_error += addend
+	tmp = sum_value + sum_error
+	sum_error = (sum_value - tmp) + sum_error
+	sum_value = tmp
+	return sum_value::T,sum_error::T
+end
+
 # These "constants" pre-allocate memory for matrices used in the derivative computation (to save time with allocation and garbage collection):
 if !@isdefined pxpr0
   const pxpr0 = zeros(Float64,3);const  pxpa0=zeros(Float64,3);const  pxpk=zeros(Float64,3);const  pxps=zeros(Float64,3);const  pxpbeta=zeros(Float64,3)
@@ -29,7 +41,7 @@ end
 
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
 #function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},IC::Array{Any,1},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
-function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},IC::Array{Any,1},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
+function ttv_elements!(init::IC,t0::T,h::T,tmax::T,tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,init.nbody,init.nbody)) where {T <: Real}
 #
 # Input quantities:
 # n     = number of bodies
@@ -49,26 +61,20 @@ function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},IC::Arra
 #
 #fcons = open("fcons.txt","w");
 # Set up mass, position & velocity arrays.  NDIM =3
-m=zeros(eltype(elements),n)
-x=zeros(eltype(elements),NDIM,n)
-v=zeros(eltype(elements),NDIM,n)
 # Fill the transit-timing array with zeros:
 fill!(tt,0.0)
 # Counter for transits of each planet:
 fill!(count,0)
+# Initialize the N-body problem using nest hierarchy of Keplerians:
+x,v = init_nbody(init,t0)
 # Insert masses from the elements array:
-for i=1:n
-  m[i] = elements[i,1]
-end
 # Allow for perturbations to initial conditions: jq labels body; iq labels phase-space element (or mass)
 # iq labels phase-space element (1-3: x; 4-6: v; 7: m)
 dq = 0.0
 if iq == 7 && dlnq != 0.0
-  dq = m[jq]*dlnq
-  m[jq] += dq
+  dq = init.m[jq]*dlnq
+  init.m[jq] += dq
 end
-# Initialize the N-body problem using nested hierarchy of Keplerians:
-x,v = init_nbody(elements,t0,IC)
 #elements_big=big.(elements); t0big = big(t0)
 #xbig,vbig = init_nbody(elements_big,t0big,n)
 #x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig)
@@ -91,13 +97,13 @@ if dlnq != 0.0 && iq > 0 && iq < 7
     v[iq-3,jq] += dq
   end
 end
-ttv!(n,t0,h,tmax,m,x,v,tt,count,fout,iout,rstar,pair)
+ttv!(init,t0,h,tmax,x,v,tt,count,fout,iout,rstar,pair)
 return dq
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 # This version is used to test/debug findtransit2 by computing finite difference derivative of findtransit2.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},IC::Array{Any,1},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,n,n))
+function ttv_elements!(init::IC,t0::Float64,h::Float64,tmax::Float64,tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,init.nbody,init.nbody))
 #
 # Input quantities:
 # n     = number of bodies
@@ -121,9 +127,6 @@ function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::A
 # Example: see test_ttv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
-m=zeros(Float64,n)
-x=zeros(Float64,NDIM,n)
-v=zeros(Float64,NDIM,n)
 # Fill the transit-timing & jacobian arrays with zeros:
 fill!(tt,0.0)
 fill!(dtdq0,0.0)
@@ -132,25 +135,21 @@ fill!(dtdq0_num,0.0)
 dtdelements = copy(dtdq0)
 # Counter for transits of each planet:
 fill!(count,0)
-for i=1:n
-  m[i] = elements[i,1]
-end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(Float64,7*n,7*n)
-x,v = init_nbody(elements,t0,IC,jac_init)
+x,v,jac_init = init_nbody(init,t0)
 #x,v = init_nbody(elements,t0,n)
 #tt = convert(Array{Float64,2}, tt)
 #count = convert(Array{Int64,1}, count)
-ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,dtdq0_num,dlnq,rstar,pair)
+ttv!(init,t0,h,tmax,x,v,tt,count,dtdq0,dtdq0_num,dlnq,rstar,pair)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
 ntt_max = size(tt)[2]
-for i=1:n, j=1:count[i]
+for i=1:init.nbody, j=1:count[i]
   if j <= ntt_max
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
-    for k=1:n, l=1:7
+    for k=1:init.nbody, l=1:7
       dtdelements[i,j,l,k] = 0.0
-      for p=1:n, q=1:7
+      for p=1:init.nbody, q=1:7
         dtdelements[i,j,l,k] += dtdq0[i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
       end
     end
@@ -160,7 +159,7 @@ return dtdelements
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},IC::Array{Any,1},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64;pair=zeros(Bool,n,n))
+function ttv_elements!(init::IC,t0::Float64,h::Float64,tmax::Float64,tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64;pair=zeros(Bool,init.nbody,init.nbody))
 #
 # Input quantities:
 # n     = number of bodies
@@ -184,9 +183,6 @@ function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::A
 # Example: see test_ttv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
-m=zeros(Float64,n)
-x=zeros(Float64,NDIM,n)
-v=zeros(Float64,NDIM,n)
 # Fill the transit-timing & jacobian arrays with zeros:
 fill!(tt,0.0)
 fill!(dtdq0,0.0)
@@ -194,23 +190,19 @@ fill!(dtdq0,0.0)
 dtdelements = copy(dtdq0)
 # Counter for transits of each planet:
 fill!(count,0)
-for i=1:n
-  m[i] = elements[i,1]
-end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(Float64,7*n,7*n)
-x,v = init_nbody(elements,t0,IC,jac_init)
+x,v,jac_init = init_nbody(init,t0)
 #x,v = init_nbody(elements,t0,n)
-ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,rstar,pair)
+ttv!(init,t0,h,tmax,x,v,tt,count,dtdq0,rstar,pair)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
 ntt_max = size(tt)[2]
-for i=1:n, j=1:count[i]
+for i=1:init.nbody, j=1:count[i]
   if j <= ntt_max
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
-    for k=1:n, l=1:7
+    for k=1:init.nbody, l=1:7
       dtdelements[i,j,l,k] = 0.0
-      for p=1:n, q=1:7
+      for p=1:init.nbody, q=1:7
         dtdelements[i,j,l,k] += dtdq0[i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
       end
      end
@@ -220,7 +212,7 @@ return dtdelements
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
-function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},
+function ttv!(init::IC,t0::T,h::T,tmax::T,
   x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T,pair::Array{Bool,2}) where {T <: Real}
 xprior = copy(x)
 vprior = copy(v)
@@ -228,6 +220,7 @@ xtransit = copy(x)
 vtransit = copy(v)
 # Set the time to the initial time:
 t = t0
+n = init.nbody
 # Define error estimate based on Kahan (1965):
 s2 = zero(T)
 # Set step counter to zero:
@@ -251,12 +244,12 @@ end
 dt::Float64 = 0.0
 gi = 0.0
 ntt_max = size(tt)[2]
-param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
+param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(init.m))
 while t < (t0+tmax) && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,h,m,n,jac_step,pair)
-  #dh17!(x,v,h,m,n,jac_step,pair)
-  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
+  ah18!(x,v,h,init.m,n,jac_step,pair)
+  #dh17!(x,v,h,init.m,n,jac_step,pair)
+  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(init.m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
   # any body transits another body):
@@ -273,7 +266,7 @@ while t < (t0+tmax) && param_real
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
+        dt = findtransit3!(1,i,n,h,dt0,init.m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -288,8 +281,9 @@ while t < (t0+tmax) && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -298,13 +292,14 @@ return
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
-function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64,pair::Array{Bool,2})
+function ttv!(init::IC,t0::Float64,h::Float64,tmax::Float64,x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64,pair::Array{Bool,2})
 xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
 # Set the time to the initial time:
 t = t0
+n = init.nbody
 # Define error estimate based on Kahan (1965):
 s2 = 0.0
 # Set step counter to zero:
@@ -328,12 +323,12 @@ end
 dt::Float64 = 0.0
 gi = 0.0
 ntt_max = size(tt)[2]
-param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
+param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(init.m)) && all(isfinite.(jac_step))
 while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,h,m,n,jac_step,pair)
+  ah18!(x,v,h,init.m,n,jac_step,pair)
   #dh17!(x,v,h,m,n,jac_step,pair)
-  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
+  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(init.m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
   # any body transits another body):
@@ -350,7 +345,7 @@ while t < t0+tmax && param_real
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
+        dt = findtransit3!(1,i,n,h,dt0,init.m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -365,8 +360,9 @@ while t < t0+tmax && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -375,13 +371,15 @@ return
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
-function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64,pair::Array{Bool,2})
+function ttv!(init::IC,t0::Float64,h::Float64,tmax::Float64,x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64,pair::Array{Bool,2})
 xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
 # Set the time to the initial time:
 t = t0
+n = init.nbody
+m = init.m
 # Define error estimate based on Kahan (1965):
 s2 = 0.0
 # Set step counter to zero:
@@ -442,8 +440,9 @@ while t < t0+tmax && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -453,19 +452,21 @@ end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
 # This version is used to test findtransit2 by computing finite difference derivative of findtransit2.
-function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64,pair::Array{Bool,2})
+function ttv!(init::IC,t0::Float64,h::Float64,tmax::Float64,x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64,pair::Array{Bool,2})
 xprior = copy(x)
 vprior = copy(v)
 #xtransit = big.(x); xtransit_plus = big.(x); xtransit_minus = big.(x)
 #vtransit = big.(v); vtransit_plus = big.(v); vtransit_minus = big.(v)
 xtransit = copy(x); xtransit_plus = big.(x); xtransit_minus = big.(x)
 vtransit = copy(v); vtransit_plus = big.(v); vtransit_minus = big.(v)
-m_plus = big.(m); m_minus = big.(m); hbig = big(h); dq = big(0.0)
+m_plus = big.(init.m); m_minus = big.(init.m); hbig = big(h); dq = big(0.0)
 if h == 0
   println("h is zero ",h)
 end
 # Set the time to the initial time:
 t = t0
+n = init.nbody
+m = init.m
 # Define error estimate based on Kahan (1965):
 s2 = 0.0
 # Set step counter to zero:
@@ -577,8 +578,9 @@ while t < t0+tmax && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -587,7 +589,7 @@ return
 end
 
 # Computes TTVs as a function of initial x,v,m.
-function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},fout::String,iout::Int64,rstar::T,pair::Array{Bool,2}) where {T <: Real}
+function ttv!(init::IC,t0::T,h::T,tmax::T,x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},fout::String,iout::Int64,rstar::T,pair::Array{Bool,2}) where {T <: Real}
 # Make some copies to allocate space for saving prior step and computing coordinates at the times of transit.
 xprior = copy(x)
 vprior = copy(v)
@@ -595,6 +597,8 @@ xtransit = copy(x)
 vtransit = copy(v)
 # Set the time to the initial time:
 t = t0
+n = init.nbody
+m = init.m
 # Define error estimate based on Kahan (1965):
 s2 = zero(T)
 # Set step counter to zero:
@@ -656,8 +660,9 @@ while t < t0+tmax && param_real
     writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
   end
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -671,7 +676,7 @@ end
 
 # Advances the center of mass of a binary (any pair of bodies)
 #function centerm!(m::Array{Float64,1},mijinv::Float64,x::Array{Float64,2},v::Array{Float64,2},vcm::Array{Float64,1},delx::Array{Float64,1},delv::Array{Float64,1},i::Int64,j::Int64,h::Float64)
-function centerm!(m::Array{T,1},mijinv::T,x::Array{T,2},v::Array{T,2},vcm::Array{T,1},delx::Array{T,1},delv::Array{T,1},i::Int64,j::Int64,h::T) where {T <: Real}
+function centerm!(m::Array{T,2},mijinv::T,x::Array{T,2},v::Array{T,2},vcm::Array{T,1},delx::Array{T,1},delv::Array{T,1},i::Int64,j::Int64,h::T) where {T <: Real}
 for k=1:NDIM
   x[k,i] +=  m[j]*mijinv*delx[k] + h*vcm[k]
   x[k,j] += -m[i]*mijinv*delx[k] + h*vcm[k]
@@ -723,7 +728,7 @@ return
 end
 
 # Carries out a Kepler step and reverse drift for bodies i & j
-function kepler_driftij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,drift_first::Bool) where {T <: Real}
+function kepler_driftij!(m::Array{T,2},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,drift_first::Bool) where {T <: Real}
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(typeof(h),12)
@@ -756,7 +761,7 @@ return
 end
 
 # Carries out a Kepler step and reverse drift for bodies i & j, and computes Jacobian:
-function kepler_driftij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},drift_first::Bool) where {T <: Real}
+function kepler_driftij!(m::Array{T,2},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},drift_first::Bool) where {T <: Real}
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(typeof(h),12)
@@ -814,7 +819,7 @@ end
 
 # Carries out a Kepler step for bodies i & j
 #function keplerij!(m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64)
-function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T) where {T <: Real}
+function keplerij!(m::Array{T,2},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T) where {T <: Real}
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(typeof(h),12)
@@ -853,7 +858,7 @@ return
 end
 
 # Carries out a Kepler step for bodies i & j
-function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},dqdt::Array{T,1}) where {T <: Real}
+function keplerij!(m::Array{T,2},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},dqdt::Array{T,1}) where {T <: Real}
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(typeof(h),12)
@@ -988,7 +993,7 @@ end
 return
 end
 
-function kickfast!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
+function kickfast!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},n::Int64,pair::Array{Bool,2}) where {T <: Real}
 rij = zeros(typeof(h),3)
 @inbounds for i=1:n-1
   for j = i+1:n
@@ -1010,7 +1015,7 @@ end
 return
 end
 
-function kickfast!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},
+function kickfast!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},n::Int64,jac_step::Array{T,2},
     dqdt_kick::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
 rij = zeros(typeof(h),3)
 #fill!(jac_step,zero(typeof(h)))
@@ -1061,7 +1066,7 @@ end
 return
 end
 
-function phisalpha!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},alpha::T,n::Int64,pair::Array{Bool,2}) where {T <: Real}
+function phisalpha!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},alpha::T,n::Int64,pair::Array{Bool,2}) where {T <: Real}
 # Computes the 4th-order correction:
 #function [v] = phisalpha(x,v,h,m,alpha,pair)
 #n = size(m,2);
@@ -1114,7 +1119,7 @@ end
 return
 end
 
-function phisalpha!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},
+function phisalpha!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},
   alpha::T,n::Int64,jac_step::Array{T,2},dqdt_phi::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
 # Computes the 4th-order correction:
 #function [v] = phisalpha(x,v,h,m,alpha,pair)
@@ -1262,7 +1267,7 @@ end
 return
 end
 
-function phic!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
+function phic!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},n::Int64,pair::Array{Bool,2}) where {T <: Real}
 a = zeros(typeof(h),3,n)
 rij = zeros(typeof(h),3)
 aij = zeros(typeof(h),3)
@@ -1302,7 +1307,7 @@ coeff = h^3/36*GNEWT
 end
 end
 
-function phic!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+function phic!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
 a = zeros(typeof(h),3,n)
 rij = zeros(typeof(h),3)
 aij = zeros(typeof(h),3)
@@ -1457,7 +1462,7 @@ return
 end
 
 # Carries out the AH18 mapping:
-function ah18!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
+function ah18!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},n::Int64,pair::Array{Bool,2}) where {T <: Real}
 # New version of solver that consolidates keplerij and driftij, and sets
 # alpha = 0:
 h2 = 0.5*h
@@ -1485,7 +1490,7 @@ return
 end
 
 # Carries out the AH18 mapping & computes the Jacobian:
-function ah18!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+function ah18!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0); half = convert(typeof(h),0.5); two = convert(typeof(h),2.0)
 h2 = half*h
 sevn = 7*n
@@ -1597,7 +1602,7 @@ return
 end
 
 # Carries out the DH17 mapping:
-function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
+function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},n::Int64,pair::Array{Bool,2}) where {T <: Real}
 alpha = convert(typeof(h),alpha0)
 h2 = 0.5*h
 # alpha = 0. is similar in precision to alpha=0.25
@@ -1643,7 +1648,7 @@ return g
 end
 
 # Carries out the DH17 mapping & computes the Jacobian:
-function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0); half = convert(typeof(h),0.5); two = convert(typeof(h),2.0)
 h2 = half*h
 alpha = convert(typeof(h),alpha0)
@@ -1782,7 +1787,7 @@ return #jac_step
 end
 
 # Carries out the DH17 mapping & computes the derivative with respect to time step, h:
-function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,dqdt::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
+function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,2},n::Int64,dqdt::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0); half = convert(typeof(h),0.5); two = convert(typeof(h),2.0)
 h2 = half*h
 # This routine assumes that alpha = 0.0
@@ -1840,7 +1845,7 @@ dqdt .= dqdt_kick
     end
   end
 end
-# Looks like we are missing phic here: [ ]  
+# Looks like we are missing phic here: [ ]
 # Since I haven't added dqdt to phic yet, for now, set jac_phi equal to identity matrix
 # (since this is commented out within phisalpha):
 jac_phi .= Matrix{eltype(h)}(I,sevn,sevn)
@@ -1901,7 +1906,7 @@ end
 
 # Finds the transit by taking a partial dh17 step from prior times step:
 #function findtransit2!(i::Int64,j::Int64,n::Int64,h::Float64,tt::Float64,m::Array{Float64,1},x1::Array{Float64,2},v1::Array{Float64,2})
-function findtransit2!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,1},x1::Array{T,2},v1::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+function findtransit2!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,2},x1::Array{T,2},v1::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
 # Computes the transit time, approximating the motion as a fraction of a DH17 step forward in time.
 # Initial guess using linear interpolation:
 dt = one(h)
@@ -1956,7 +1961,7 @@ end
 
 # Finds the transit by taking a partial dh17 step from prior times step, computes timing Jacobian, dtdq, wrt initial cartesian coordinates, masses:
 #function findtransit2!(i::Int64,j::Int64,n::Int64,h::Float64,tt::Float64,m::Array{Float64,1},x1::Array{Float64,2},v1::Array{Float64,2},jac_step::Array{Float64,2},dtdq::Array{Float64,2},pair::Array{Bool,2})
-function findtransit2!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,1},x1::Array{T,2},v1::Array{T,2},jac_step::Array{T,2},dtdq::Array{T,2},pair::Array{Bool,2})  where {T <: Real}
+function findtransit2!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,2},x1::Array{T,2},v1::Array{T,2},jac_step::Array{T,2},dtdq::Array{T,2},pair::Array{Bool,2})  where {T <: Real}
 
 # Computes the transit time, approximating the motion as a fraction of a DH17 step forward in time.
 # Also computes the Jacobian of the transit time with respect to the initial parameters, dtdq[7,n].
@@ -2055,7 +2060,7 @@ return tt::typeof(h),gdot::typeof(h)
 end
 
 # Finds the transit by taking a partial dh17 step from prior times step, computes timing Jacobian, dtdq, wrt initial cartesian coordinates, masses:
-function findtransit3!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,1},x1::Array{T,2},v1::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+function findtransit3!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,2},x1::Array{T,2},v1::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
 # Computes the transit time, approximating the motion as a fraction of a DH17 step forward in time.
 # Also computes the Jacobian of the transit time with respect to the initial parameters, dtdq[7,n].
 # This version is same as findtransit2, but uses the derivative of dh17 step with respect to time
@@ -2096,7 +2101,7 @@ return tt::typeof(h)
 end
 
 # Finds the transit by taking a partial dh17 step from prior times step, computes timing Jacobian, dtdq, wrt initial cartesian coordinates, masses:
-function findtransit3!(i::Int64,j::Int64,n::Int64,h::Float64,tt::Float64,m::Array{Float64,1},x1::Array{Float64,2},v1::Array{Float64,2},jac_step::Array{Float64,2},dtdq::Array{Float64,2},pair::Array{Bool,2})
+function findtransit3!(i::Int64,j::Int64,n::Int64,h::Float64,tt::Float64,m::Array{Float64,2},x1::Array{Float64,2},v1::Array{Float64,2},jac_step::Array{Float64,2},dtdq::Array{Float64,2},pair::Array{Bool,2})
 # Computes the transit time, approximating the motion as a fraction of a DH17 step forward in time.
 # Also computes the Jacobian of the transit time with respect to the initial parameters, dtdq[7,n].
 # This version is same as findtransit2, but uses the derivative of dh17 step with respect to time

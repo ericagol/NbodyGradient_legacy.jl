@@ -1,9 +1,6 @@
 # This code tests two functions: keplerij! and kep_elliptic!
-using Test
-using LinearAlgebra
 #using PyPlot
-include("../src/kepler_solver_derivative.jl")
-include("../src/ttv.jl")
+
 
 @testset "kep_elliptic" begin
 

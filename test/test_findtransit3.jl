@@ -1,14 +1,3 @@
-
-#include("../src/ttv.jl")
-#include("/Users/ericagol/Computer/Julia/regress.jl")
-
-#maxabs(x) = maximum(abs.(x))
-
-using DelimitedFiles
-using LinearAlgebra
-#KEPLER_TOL  = 1e-15
-#TRANSIT_TOL = 1e-15
-
 @testset "findtransit3" begin
 
 #n = 8
@@ -19,19 +8,20 @@ h = 0.05
 #tmax = 600.0
 tmax = 100.0
 #tmax = 10.0
-IC = [3,"1,1"]
+system = [3,1,1]
 
 # Read in initial conditions:
-elements = readdlm("elements.txt",',',comments=true)
+elements = "elements.txt"
+init = IC(elements,system)
 # Increase masses for debugging:
-elements[2,1] *= 10.0
-elements[3,1] *= 10.0
+init.m[2] *= 10.0
+init.m[3] *= 10.0
 
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
 ntt = zeros(Int64,n)
 for i=2:n
-  global ntt[i] = ceil(Int64,tmax/elements[i,2])+3
+  global ntt[i] = ceil(Int64,tmax/init.elements[i,2])+3
 end
 tt  = zeros(n,maximum(ntt))
 # Save a counter for the actual number of transit times of each planet:
@@ -43,7 +33,7 @@ dtdq0_num = zeros(BigFloat,n,maximum(ntt),7,n)
 dlnq = big(1e-10)
 # Make radius of star large:
 rstar = 1e12
-dtdelements_num = ttv_elements!(n,t0,h,tmax,elements,IC,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
+dtdelements_num = ttv_elements!(init,t0,h,tmax,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
 
 dtdq0_num = convert(Array{Float64,4},dtdq0_num)
 

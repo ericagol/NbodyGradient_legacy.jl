@@ -1,17 +1,12 @@
 # This code tests two functions: keplerij! and kep_elliptic!
-#using PyPlot
-#include("../src/kepler_solver_derivative.jl")
-#include("../src/ttv.jl")
-
-using DelimitedFiles
-using LinearAlgebra
 
 @testset "keplerij" begin
 
 # Next, try computing two-body Keplerian Jacobian:
 
-global t0 = 7257.93115525
-global elements = readdlm("elements.txt",',',comments=true)
+t0 = 7257.93115525
+elements = "elements.txt"
+system = [3,1,1]
 
 n = 3
 h  = 0.05
@@ -19,27 +14,20 @@ hbig  = big(h)
 tmax = 600.0
 #dlnq = 1e-8
 dlnq = 1e-20
-IC = [3,"1,1"]
-
+init = IC(elements,system)
 #elements[2,1] = 0.75
-elements[2,1] = 1.0
-elements[3,1] = 1.0
+init.elements[2,1] = 1.0
+init.elements[3,1] = 1.0
 
-m =zeros(n)
 x0=zeros(NDIM,n)
 v0=zeros(NDIM,n)
 
-for k=1:n
-  m[k] = elements[k,1]
-end
-
 for iter = 1:2
-
-x0,v0 = init_nbody(elements,t0,IC)
+@time x0,v0 = init_nbody(init,t0)
 h = 0.05; hbig = big(h)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:
-    m[1:n] *= 1e-1
+    init.m[1:n] *= 1e-1
     h = 0.05
     hbig = big(h)
  end
@@ -56,11 +44,11 @@ i=1 ; j=2
 x = copy(x0) ; v=copy(v0)
 # Predict values of s:
 #println("Before first step: ",x," ",v)
-keplerij!(m,x,v,i,j,h,jac_ij,dqdt_ij)
+keplerij!(init.m,x,v,i,j,h,jac_ij,dqdt_ij)
 #println("After first step: ",x," ",v)
 x0 = copy(x) ; v0 = copy(v)
-xbig = big.(x) ; vbig=big.(v); mbig = big.(m)
-keplerij!(m,x,v,i,j,h,jac_ij,dqdt_ij)
+xbig = big.(x) ; vbig=big.(v); mbig = big.(init.m)
+keplerij!(init.m,x,v,i,j,h,jac_ij,dqdt_ij)
 # Now compute Jacobian with BigFloat precision:
 jac_ij_big = zeros(BigFloat,14,14)
 dqdt_ij_big = zeros(BigFloat,14)
@@ -78,7 +66,7 @@ println("max(jac_ij - jac_ij_big): ",maxabs(convert(Array{Float64,2},jac_ij_big)
 jac_ij_num = zeros(BigFloat,14,14)
 global xsave = big.(x)
 vsave = big.(v)
-msave = big.(m)
+msave = big.(init.m)
 
 # Compute the time derivatives:
 # Initial positions, velocities & masses:

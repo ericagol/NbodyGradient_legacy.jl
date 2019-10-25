@@ -14,18 +14,18 @@ h  = 0.05
 hbig = big(h)
 tmax = 600.0
 dlnq = big(1e-20)
-IC = [3,"1,1"]
+system = [3,1,1]
 
 #nstep = 8000
 nstep = 500
 #nstep = 1
 
-elements = readdlm("elements.txt",',',comments=true)
+elements = "elements.txt"
+init = IC(elements,system;der=false)
 # Increase mass of inner planets:
-elements[2,1] *= 100.
-elements[3,1] *= 100.
+init.elements[2,1] *= 100.
+init.elements[3,1] *= 100.
 
-m =zeros(n)
 x0=zeros(3,n)
 v0=zeros(3,n)
 
@@ -42,12 +42,10 @@ pair = zeros(Bool,n,n)
 # Initialize with identity matrix:
 jac_step = Matrix{Float64}(I,7*n,7*n)
 
-for k=1:n
-  m[k] = elements[k,1]
-end
+m = init.m
 m0 = copy(m)
 
-x0,v0 = init_nbody(elements,t0,IC)
+x0,v0 = init_nbody(init,t0)
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)

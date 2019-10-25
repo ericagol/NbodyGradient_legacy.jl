@@ -15,37 +15,33 @@ tmax = 100.0
 #tmax = 10.0
 
 # Read in initial conditions:
-elements = readdlm("elements.txt",',',comments=true)
-IC = [3,"1,1"]
+elements = "elements.txt"
+system = [3,1,1]
+init = IC(elements,system)
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
 ntt = zeros(Int64,n)
 for i=2:n
-  ntt[i] = ceil(Int64,tmax/elements[i,2])+3
+  ntt[i] = ceil(Int64,tmax/init.elements[i,2])+3
 end
-println("ntt: ",ntt)
 tt  = zeros(n,maximum(ntt))
 tt1 = zeros(n,maximum(ntt))
 tt2 = zeros(n,maximum(ntt))
 tt3 = zeros(n,maximum(ntt))
 # Save a counter for the actual number of transit times of each planet:
-counta = zeros(Int64,n)
+count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttv_elements!(n,t0,h,tmax,elements,IC,tt1,count1,0.0,0,0,rstar)
-dq = ttv_elements!(n,t0,h,tmax,elements,IC,tt1,count1,0.0,0,0,rstar)
-dq = ttv_elements!(n,t0,h,tmax,elements,IC,tt1,count1,0.0,0,0,rstar)
+dq = ttv_elements!(init,t0,h,tmax,tt1,count1,0.0,0,0,rstar)
 # Now call with one tenth the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(n,t0,h/10.,tmax,elements,IC,tt2,count2,0.0,0,0,rstar)
+dq = ttv_elements!(init,t0,h/10.,tmax,tt2,count2,0.0,0,0,rstar)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdq0 = zeros(n,maximum(ntt),7,n)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,IC,tt,counta,dtdq0,rstar)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,IC,tt,counta,dtdq0,rstar)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,IC,tt,counta,dtdq0,rstar)
+dtdelements = ttv_elements!(init,t0,h,tmax,tt,count,dtdq0,rstar)
 #read(STDIN,Char)
 
 # Check that this is working properly:
@@ -65,15 +61,15 @@ dlnq = big(1e-12)
 hbig = big(h); t0big = big(t0); tmaxbig=big(tmax); tt2big = big.(tt2); tt3big = big.(tt3)
 for jq=1:n
   for iq=1:7
-    elements2  = big.(elements)
-    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elements2,IC,tt2big,count2,dlnq,iq,jq,big(rstar))
-    elements3  = big.(elements)
-    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elements3,IC,tt3big,count3,-dlnq,iq,jq,big(rstar))
+    initbig1 = IC(elements,system;der=false,prec=BigFloat)
+    dq_plus = ttv_elements!(initbig1,t0big,hbig,tmaxbig,tt2big,count2,dlnq,iq,jq,big(rstar))
+    initbig2 = IC(elements,system;der=false,prec=BigFloat)
+    dq_minus = ttv_elements!(initbig2,t0big,hbig,tmaxbig,tt3big,count3,-dlnq,iq,jq,big(rstar))
     for i=1:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:
         dtdq0_sum[i,k,iq,jq] = (tt2big[i,k]-tt3big[i,k])/(dq_plus-dq_minus)
-#        println(i," ",k," ",iq," ",jq," ",tt2big[i,k]," ",tt3big[i,k]," ")
+        #println(i," ",k," ",iq," ",jq," ",tt2big[i,k]," ",tt3big[i,k]," ")
       end
     end
   end
@@ -83,7 +79,7 @@ nbad = 0
 ntot = 0
 diff_dtdq0 = zeros(n,maximum(ntt),7,n)
 mask = zeros(Bool, size(dtdq0))
-for i=2:n, j=1:counta[i], k=1:7, l=1:n
+for i=2:n, j=1:count[i], k=1:7, l=1:n
   if abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l]) > 0.1*abs(dtdq0[i,j,k,l]) && ~(abs(dtdq0[i,j,k,l]) == 0.0  && abs(dtdq0_sum[i,j,k,l]) < 1e-3)
 #    println(i," ",j," ",k," ",l," ",dtdq0[i,j,k,l]," ",dtdq0_sum[i,j,k,l]," ",itdq0[i,j,k,l])
     nbad +=1
