@@ -9,35 +9,22 @@ Converts initial orbital elements into Cartesian coordinates.
 # Outputs
 - `x::Array{<:Real,2}`: Cartesian positions of each body.
 - `v::Array{<:Real,2}`: Cartesian velocites of each body.
-- `jac_init::Array{<:Real,2}`: (Optional; if init.derivatives == true) Derivatives of A-matrix and x,v with respect to the masses of each object.
+- `jac_init::Array{<:Real,2}`: (Optional; if init.der == true) Derivatives of A-matrix and x,v with respect to the masses of each object.
 """
-function init_nbody(init::IC,t0::T) where T <: Real
+function init_nbody(init::ElementsIC{T}) where T <: AbstractFloat
 
-    if !isa(t0,eltype(init.elements))
-         error("t0 needs to be same type as values in elements array")
-    end
-
-    if init.derivatives
-        r, rdot, jac_init = kepcalc(init,t0)
-    else
-        r, rdot = kepcalc(init,t0)
-    end
+    r, rdot, jac_init = kepcalc(init)
 
     Ainv = inv(init.amat)
 
     # Cartesian coordinates
-    x = zeros(eltype(t0),init.NDIM,init.nbody)
+    x = zeros(T,init.NDIM,init.nbody)
     x = Array(transpose(*(Ainv,r)))
     
-    v = zeros(eltype(t0),init.NDIM,init.nbody)
+    v = zeros(T,init.NDIM,init.nbody)
     v = Array(transpose(*(Ainv,rdot)))
 
-    # Calculate and return mass derivatives if true
-    if init.derivatives
-        return x,v,jac_init
-    else
-        return x,v
-    end
+    return x,v,jac_init
 end
 
 """
@@ -51,15 +38,15 @@ Computes Kepler's problem for each pair of bodies in the system.
 # Outputs
 - `rkepler::Array{<:Real,2}`: Matrix of initial position vectors for each keplerian.
 - `rdotkepler::Array{<:Real,2}`: Matrix of initial velocity vectors for each keplerian.
-- `jac_init::Array{<:Real,2}`: (Optional; if init.derivatives == true) Derivatives of the A-matrix and cartesian positions and velocities with respect to the masses of each object.
+- `jac_init::Array{<:Real,2}`: (Optional; if init.der == true) Derivatives of the A-matrix and cartesian positions and velocities with respect to the masses of each object.
 """
-function kepcalc(init::IC,t0::T) where T <: Real
+function kepcalc(init::ElementsIC{T}) where T <: AbstractFloat
 
     # Kepler position/velocity arrays (body,pos/vel)
-    rkepler = zeros(eltype(t0),init.nbody,init.NDIM)
-    rdotkepler = zeros(eltype(t0),init.nbody,init.NDIM)
-    if init.derivatives
-        jac_kepler = zeros(eltype(init.m),6*init.nbody,7*init.nbody)
+    rkepler = zeros(T,init.nbody,init.NDIM)
+    rdotkepler = zeros(T,init.nbody,init.NDIM)
+    if init.der
+        jac_kepler = zeros(T,6*init.nbody,7*init.nbody)
     end
     # Compute Kepler's problem
     for i in 1:init.nbody
@@ -70,17 +57,17 @@ function kepcalc(init::IC,t0::T) where T <: Real
         m2 = sum(init.m[ind2])
 
         if i < init.nbody
-            if init.derivatives
-                jac_21 = zeros(typeof(t0),7,7)
-                r, rdot = kepler_init(t0,m1+m2,init.elements[i+1,2:7],jac_21)
+            if init.der
+                jac_21 = zeros(T,7,7)
+                r, rdot = kepler_init(init.t0,m1+m2,init.elements[i+1,2:7],jac_21)
             else
-                r, rdot = kepler_init(t0,m1+m2,init.elements[i+1,2:7])
+                r, rdot = kepler_init(init.t0,m1+m2,init.elements[i+1,2:7])
             end
             for j = 1:init.NDIM
                 rkepler[i,j] = r[j]
                 rdotkepler[i,j] = rdot[j]
             end
-            if init.derivatives
+            if init.der
                 # Save Keplerian Jacobian. First, positions/velocity vs. elements
                 for j=1:6, k=1:6
                     jac_kepler[(i-1)*6+j,i*7+k] = jac_21[j,k]
@@ -96,11 +83,11 @@ function kepcalc(init::IC,t0::T) where T <: Real
             end
         end
     end
-    if init.derivatives
+    if init.der
         jac_init = d_dm(init,rkepler,rdotkepler,jac_kepler)
         return rkepler,rdotkepler,jac_init
     else
-        return rkepler,rdotkepler
+        return rkepler,rdotkepler,zeros(T,0,0)
     end
 end
 
@@ -117,15 +104,15 @@ Computes derivatives of A-matrix, position, and velocity with respect to the mas
 # Outputs
 - `jac_init::Array{<:Real,2}`: Derivatives of the A-matrix and cartesian positions and velocities with respect to the masses of each object.
 """
-function d_dm(init::IC,rkepler::Array{T,2},rdotkepler::Array{T,2},jac_kepler::Array{T,2}) where T <: Real
+function d_dm(init::ElementsIC{T},rkepler::Array{T,2},rdotkepler::Array{T,2},jac_kepler::Array{T,2}) where T <: AbstractFloat
 
     N = init.nbody
     m = init.m
     ϵ = init.ϵ
-    jac_init = zeros(eltype(m),7*N,7*N)
-    dAdm = zeros(eltype(m),N,N,N)
-    dxdm = zeros(eltype(m),NDIM,N)
-    dvdm = zeros(eltype(m),NDIM,N)
+    jac_init = zeros(T,7*N,7*N)
+    dAdm = zeros(T,N,N,N)
+    dxdm = zeros(T,NDIM,N)
+    dvdm = zeros(T,NDIM,N)
 
     # Differentiate A matrix wrt the mass of each body
     for k in 1:N, i in 1:N, j in 1:N
@@ -135,7 +122,7 @@ function d_dm(init::IC,rkepler::Array{T,2},rdotkepler::Array{T,2},jac_kepler::Ar
 
     # Calculate inverse of dAdm
     Ainv = inv(init.amat)
-    dAinvdm = zeros(eltype(m),N,N,N)
+    dAinvdm = zeros(T,N,N,N)
     for k in 1:N
         dAinvdm[:,:,k] = -Ainv*dAdm[:,:,k]*Ainv
     end
@@ -173,8 +160,8 @@ Creates the A matrix presented in Hamers & Portegies Zwart 2016 (HPZ16).
 # Outputs
 - `A::Array{<:Real,2}`: A matrix.
 """
-function amatrix(ϵ::Array{T,2},m::Array{T,2}) where T<:Real
-    A = zeros(eltype(ϵ),size(ϵ)) # Empty A matrix
+function amatrix(ϵ::Array{T,2},m::Array{T,2}) where T<:AbstractFloat
+    A = zeros(T,size(ϵ)) # Empty A matrix
     N = length(ϵ[:,1]) # Number of bodies in system
 
     for i in 1:N, j in 1:N
@@ -183,7 +170,7 @@ function amatrix(ϵ::Array{T,2},m::Array{T,2}) where T<:Real
     return A
 end
 
-function amatrix(init::IC)
+function amatrix(init::ElementsIC{T}) where T <: Real
     init.amat = amatrix(init.ϵ,init.m)
 end
 
@@ -201,7 +188,7 @@ Sums masses in current Keplerian.
 - `m<:Real`: Sum of the masses.
 """
 function Σm(masses::Array{T,2},i::Integer,j::Integer,
-            ϵ::Array{T,2}) where T <: Real
+            ϵ::Array{T,2}) where T <: AbstractFloat
     m = 0.0
     for l in 1:size(masses)[1]
         m += masses[l]*δ_(ϵ[i,j],ϵ[i,l])

@@ -33,7 +33,7 @@ system = [4,1,1,1] # Example system array syntax. 4 bodies in concentric orbits.
 init = IC(filename,system)
 ```
 """
-mutable struct IC{T} <: InitialConditions
+mutable struct IC{T<:AbstractFloat} <: InitialConditions
     elements::Array{T,2}
     ϵ::Array{T,2}
     amat::Array{T,2}
@@ -41,18 +41,15 @@ mutable struct IC{T} <: InitialConditions
     NDIM::Int64
     nbody::Int64
     m::Array{T,2}
-
+    t0::T
     # Inner Constructor
-    function IC(filename::String,system::Array{Int64,1};
-                der::Bool = true, NDIM::Int64 = 3,
-                prec=Float64)
-        ϵ = convert(Array{prec},hierarchy(system))
-        elements = convert(Array{prec},readdlm(filename,',',comments=true))
+    function IC(filename::String,system::Array{Int64,1},t0::T;
+                der::Bool = true, NDIM::Int64 = 3,) where T <: AbstractFloat
+        ϵ = convert(Array{T},hierarchy(system))
+        elements = convert(Array{T},readdlm(filename,',',comments=true))
         nbody = system[1]
         m = reshape(vcat(elements[:,1])[1:nbody],nbody,1)
         amat = amatrix(ϵ,m)
-        return new{prec}(elements,ϵ,amat,der,NDIM,nbody,m)
+        return new{T}(elements,ϵ,amat,der,NDIM,nbody,m,t0);
     end
 end
-
-
