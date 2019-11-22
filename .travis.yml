@@ -3,19 +3,31 @@ os:
   - linux
   - osx
 julia:
-  - nightly
-  - 1.1
-  - 1.0
+  - 1.2
   - 0.7
-notifications:
-  email: false
+  - nightly
 
-# Status will not show "failing" if nightly julia build fails.
+# Status will not show "failing" if nightly or v0.7 julia build fails.
 matrix:
-  allow_failures:
-  - julia: nightly
+    fast_finish: true
+    allow_failures:
+        - julia: 0.7
+        - julia: nightly
+          
+notifications:
+    email: false
 
-# Deploy documentation if builds are successful
-after_success:
-  - julia -e 'Pkg.add("Documenter")'
-  - julia -e 'cd(Pkg.dir("NbodyGradient")); include(joinpath("docs", make.jl))'
+# Build documentation
+jobs:
+    include:
+        - stage: Documentation
+          julia: 1.2
+          os: linux
+          before_scipt:
+          script:
+              - julia --color=yes --project=docs -e
+                'using Pkg; Pkg.add("Documenter");
+                Pkg.develop(PackageSpec(path=pwd()));
+                Pkg.instantiate();
+                include("docs/make.jl")'
+          after_success: skip

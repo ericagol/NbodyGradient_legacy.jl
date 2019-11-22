@@ -1,8 +1,9 @@
-push!(LOAD_PATH,"../src/")
 using Documenter, NbodyGradient
 
 makedocs(
-    sitename= "NbodyGradient.jl",
+    modules = [NbodyGradient],
+    clean = false,
+    sitename = "NbodyGradient.jl",
     pages = [
         "Home" => "index.md",
         "Installation" => "install.md",
@@ -14,8 +15,5 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/ericagol/NbodyGradient.jl.git",
-	target = "build",
-	deps = nothing,
-	make = nothing
+    repo = "github.com/ericagol/NbodyGradient.jl.git"
 )
