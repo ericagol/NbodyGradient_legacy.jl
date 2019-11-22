@@ -3,11 +3,11 @@
 elements = "elements.txt"
 t0 = 7257.93115525
 system = [4,1,1,1]
-init = IC(elements,system)
+init = ElementsIC(elements,system,t0)
 
 n_body = init.nbody
 jac_init_num = zeros(BigFloat,7*n_body,7*n_body)
-x,v,jac_init = init_nbody(init,t0)
+x,v,jac_init = init_nbody(init)
 #dq = big.([1e-10,1e-5,1e-6,1e-6,1e-6,1e-5,1e-5])
 dq = big.([1e-10,1e-8,1e-8,1e-8,1e-8,1e-8,1e-8])
 #dq = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
@@ -15,7 +15,7 @@ t0big = big(t0)
 # Now, compute derivatives numerically:
 for j=1:n_body
   for k=1:7
-    initbig = IC(elements,system;prec=BigFloat)
+    initbig = ElementsIC(elements,system,t0big)
     dq0 = dq[k]
     if j==1 && k==1
     	dq0 = big(1e-15)
@@ -25,13 +25,13 @@ for j=1:n_body
         amatrix(initbig)
     end
     initbig.elements[j,k] += dq0
-    xp,vp = init_nbody(initbig,t0big)
+    xp,vp = init_nbody(initbig)
     if k==1
 	initbig.m[j] -= 2*dq0
     amatrix(initbig)
     end
     initbig.elements[j,k] -= 2*dq0
-    xm,vm = init_nbody(initbig,t0big)
+    xm,vm = init_nbody(initbig)
     for l=1:n_body, p=1:3
       i1 = (l-1)*7+p
       if k == 1

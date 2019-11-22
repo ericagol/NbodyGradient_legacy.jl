@@ -1,4 +1,3 @@
-
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
 @testset "ttv_elements" begin
@@ -18,7 +17,7 @@ tmax = 100.0
 # Read in initial conditions:
 elements = "elements.txt"
 system = [3,1,1]
-init = IC(elements,system)
+init = ElementsIC(elements,system,t0)
 # Make masses of planets bigger
 #elements[2,1] *= 10.0
 #elements[3,1] *= 10.0
@@ -42,11 +41,11 @@ count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttv_elements!(init,t0,h,tmax,tt1,count1,0.0,0,0,rstar)
+dq = ttv_elements!(init,h,tmax,tt1,count1,0.0,0,0,rstar)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(init,t0,h/10.0,tmax,tt2,count2,0.0,0,0,rstar)
+dq = ttv_elements!(init,h/10.0,tmax,tt2,count2,0.0,0,0,rstar)
 
 mask = zeros(Bool, size(dtdq0))
 for jq=1:n_body
@@ -65,16 +64,16 @@ end
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdelements0 = zeros(n,maximum(ntt),7,n)
-dtdelements0 = ttv_elements!(init,t0,h,tmax,tt,count,dtdq0,rstar)
+dtdelements0 = ttv_elements!(init,h,tmax,tt,count,dtdq0,rstar)
 dtdq2 = zeros(n,maximum(ntt),7,n)
 dtdelements2 = zeros(n,maximum(ntt),7,n)
-dtdelements2 = ttv_elements!(init,t0,h/2.0,tmax,tt2,count,dtdq2,rstar)
+dtdelements2 = ttv_elements!(init,h/2.0,tmax,tt2,count,dtdq2,rstar)
 dtdq4 = zeros(n,maximum(ntt),7,n)
 dtdelements4 = zeros(n,maximum(ntt),7,n)
-dtdelements4 = ttv_elements!(init,t0,h/4.0,tmax,tt4,count,dtdq4,rstar)
+dtdelements4 = ttv_elements!(init,h/4.0,tmax,tt4,count,dtdq4,rstar)
 dtdq8 = zeros(n,maximum(ntt),7,n)
 dtdelements8 = zeros(n,maximum(ntt),7,n)
-dtdelements8 = ttv_elements!(init,t0,h/8.0,tmax,tt8,count,dtdq8,rstar)
+dtdelements8 = ttv_elements!(init,h/8.0,tmax,tt8,count,dtdq8,rstar)
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
@@ -109,7 +108,7 @@ zero_num = big(0.0)
 # Now, compute derivatives numerically:
 for jq=1:n_body
   for iq=1:7
-    initbig = IC(elements,system;prec=BigFloat)
+    initbig = ElementsIC(elements,system,t0big)
 #    dq0 = delement[iq]; if jq==1 && iq==7 ; dq0 = big(1e-10); end  # Vary mass of star by a larger factor
     if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
     if ivary==1
@@ -117,13 +116,13 @@ for jq=1:n_body
     amatrix(initbig)
     end
     initbig.elements[jq,ivary] += dq0
-    dq_plus = ttv_elements!(initbig,t0big,hbig,tmaxbig,tt2,count2,zero_num,0,0,big(rstar))
+    dq_plus = ttv_elements!(initbig,hbig,tmaxbig,tt2,count2,zero_num,0,0,big(rstar))
     if ivary==1
 	initbig.m[jq] -= 2*dq0
     amatrix(initbig)
     end
     initbig.elements[jq,ivary] -= 2*dq0
-    dq_minus = ttv_elements!(initbig,t0big,hbig,tmaxbig,tt3,count2,zero_num,0,0,big(rstar))
+    dq_minus = ttv_elements!(initbig,hbig,tmaxbig,tt3,count2,zero_num,0,0,big(rstar))
     #xm,vm = init_nbody(elements,t0,n_body)
     for i=2:n
       for k=1:count2[i]

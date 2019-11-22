@@ -17,7 +17,7 @@ tmax = 100.0
 # Read in initial conditions:
 elements = "elements.txt"
 system = [3,1,1]
-init = IC(elements,system)
+init = IC(elements,system,t0)
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
 ntt = zeros(Int64,n)
@@ -33,15 +33,15 @@ count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttv_elements!(init,t0,h,tmax,tt1,count1,0.0,0,0,rstar)
+dq = ttv_elements!(init,h,tmax,tt1,count1,0.0,0,0,rstar)
 # Now call with one tenth the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(init,t0,h/10.,tmax,tt2,count2,0.0,0,0,rstar)
+dq = ttv_elements!(init,h/10.,tmax,tt2,count2,0.0,0,0,rstar)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdq0 = zeros(n,maximum(ntt),7,n)
-dtdelements = ttv_elements!(init,t0,h,tmax,tt,count,dtdq0,rstar)
+dtdelements = ttv_elements!(init,h,tmax,tt,count,dtdq0,rstar)
 #read(STDIN,Char)
 
 # Check that this is working properly:
@@ -61,10 +61,10 @@ dlnq = big(1e-12)
 hbig = big(h); t0big = big(t0); tmaxbig=big(tmax); tt2big = big.(tt2); tt3big = big.(tt3)
 for jq=1:n
   for iq=1:7
-    initbig1 = IC(elements,system;der=false,prec=BigFloat)
-    dq_plus = ttv_elements!(initbig1,t0big,hbig,tmaxbig,tt2big,count2,dlnq,iq,jq,big(rstar))
-    initbig2 = IC(elements,system;der=false,prec=BigFloat)
-    dq_minus = ttv_elements!(initbig2,t0big,hbig,tmaxbig,tt3big,count3,-dlnq,iq,jq,big(rstar))
+    initbig1 = IC(elements,system,t0big;der=false)
+    dq_plus = ttv_elements!(initbig1,hbig,tmaxbig,tt2big,count2,dlnq,iq,jq,big(rstar))
+    initbig2 = IC(elements,system,t0big;der=false)
+    dq_minus = ttv_elements!(initbig2,hbig,tmaxbig,tt3big,count3,-dlnq,iq,jq,big(rstar))
     for i=1:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:

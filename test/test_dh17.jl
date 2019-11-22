@@ -1,4 +1,4 @@
-      # Tests the routine dh17 jacobian2
+# Tests the routine dh17 jacobian2
 
 #include("../src/ttv.jl")
 
@@ -21,7 +21,7 @@ nstep = 500
 #nstep = 1
 
 elements = "elements.txt"
-init = IC(elements,system;der=false)
+init = ElementsIC(elements,system,t0)
 # Increase mass of inner planets:
 init.elements[2,1] *= 100.
 init.elements[3,1] *= 100.
@@ -45,7 +45,7 @@ jac_step = Matrix{Float64}(I,7*n,7*n)
 m = init.m
 m0 = copy(m)
 
-x0,v0 = init_nbody(init,t0)
+x0,v0 = init_nbody(init)
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)

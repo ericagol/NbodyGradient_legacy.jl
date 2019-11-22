@@ -13,7 +13,7 @@ dlnq = big(1e-15)
 system = [3,1,1]
 
 elements = "elements.txt"
-init = IC(elements,system;der=false)
+init = ElementsIC(elements,system,t0;der=false)
 init.elements[2,1] = 1.0
 init.elements[3,1] = 1.0
 
@@ -35,7 +35,7 @@ jac_step = zeros(7*n,7*n)
 m = init.m
 m0 = copy(m)
 
-x0,v0 = init_nbody(init,t0)
+x0,v0 = init_nbody(init)
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)

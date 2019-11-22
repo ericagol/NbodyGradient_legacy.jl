@@ -12,7 +12,7 @@ system = [3,1,1]
 
 # Read in initial conditions:
 elements = "elements.txt"
-init = IC(elements,system)
+init = ElementsIC(elements,system,t0)
 # Increase masses for debugging:
 init.m[2] *= 10.0
 init.m[3] *= 10.0
@@ -33,7 +33,7 @@ dtdq0_num = zeros(BigFloat,n,maximum(ntt),7,n)
 dlnq = big(1e-10)
 # Make radius of star large:
 rstar = 1e12
-dtdelements_num = ttv_elements!(init,t0,h,tmax,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
+dtdelements_num = ttv_elements!(init,h,tmax,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
 
 dtdq0_num = convert(Array{Float64,4},dtdq0_num)
 

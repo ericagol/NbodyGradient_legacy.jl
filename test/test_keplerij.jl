@@ -14,7 +14,7 @@ hbig  = big(h)
 tmax = 600.0
 #dlnq = 1e-8
 dlnq = 1e-20
-init = IC(elements,system)
+init = ElementsIC(elements,system,t0)
 #elements[2,1] = 0.75
 init.elements[2,1] = 1.0
 init.elements[3,1] = 1.0
@@ -23,7 +23,7 @@ x0=zeros(NDIM,n)
 v0=zeros(NDIM,n)
 
 for iter = 1:2
-@time x0,v0 = init_nbody(init,t0)
+@time x0,v0 = init_nbody(init)
 h = 0.05; hbig = big(h)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:
