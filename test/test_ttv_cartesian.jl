@@ -17,7 +17,7 @@ tmax = 100.0
 # Read in initial conditions:
 elements = "elements.txt"
 system = [3,1,1]
-init = IC(elements,system,t0)
+init = ElementsIC(elements,system,t0)
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
 ntt = zeros(Int64,n)
@@ -61,9 +61,9 @@ dlnq = big(1e-12)
 hbig = big(h); t0big = big(t0); tmaxbig=big(tmax); tt2big = big.(tt2); tt3big = big.(tt3)
 for jq=1:n
   for iq=1:7
-    initbig1 = IC(elements,system,t0big;der=false)
+    initbig1 = ElementsIC(elements,system,t0big)
     dq_plus = ttv_elements!(initbig1,hbig,tmaxbig,tt2big,count2,dlnq,iq,jq,big(rstar))
-    initbig2 = IC(elements,system,t0big;der=false)
+    initbig2 = ElementsIC(elements,system,t0big)
     dq_minus = ttv_elements!(initbig2,hbig,tmaxbig,tt3big,count3,-dlnq,iq,jq,big(rstar))
     for i=1:n
       for k=1:count2[i]
