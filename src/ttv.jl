@@ -74,7 +74,6 @@ dq = 0.0
 if iq == 7 && dlnq != 0.0
   dq = init.m[jq]*dlnq
   init.m[jq] += dq
-  amatrix(init)
 end
 #elements_big=big.(elements); t0big = big(t0)
 #xbig,vbig = init_nbody(elements_big,t0big,n)
