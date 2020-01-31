@@ -1,7 +1,7 @@
 # Initial Conditions
 
 ```@docs
-IC
+InitialConditions
 init_nbody
 ```
 

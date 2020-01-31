@@ -4,7 +4,6 @@ module NbodyGradient
         abstract type InitialConditions end
         abstract type Simulation end
         abstract type PreAllocArrays end
-   
 
     #################### Usings ####################
         using Reexport
@@ -14,13 +13,16 @@ module NbodyGradient
         @reexport using LinearAlgebra
         using Test
         using Statistics
-    
+        using ProgressMeter
+        @reexport using Plots
+
     ################### Includes ###################
 
         include("InitialConditions.jl")
         include("init_nbody.jl")
         include("PreAllocArrays.jl")
         include("State.jl")
+        include("Movie.jl")
         include("Integrators.jl")
         include("ah18.jl")
         include("g3.jl")
@@ -41,6 +43,6 @@ module NbodyGradient
         amatrix, init_nbody, kepler_init,  
         ttv_elements!, ttv!, drift!, kepler_drift_step!,
 		kepler_driftij!,kep_ell_hyp!, keplerij!, 
-        dh17!, kickfast!, phisalpha!, ah18!
-
+        dh17!, kickfast!, phisalpha!, ah18!,
+        Movie
 end
