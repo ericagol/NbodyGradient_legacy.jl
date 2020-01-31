@@ -4,12 +4,11 @@
 Converts initial orbital elements into Cartesian coordinates.
 
 # Arguments
-- `init::IC`: Initial conditions of the system. See [`IC`](@ref).
-- `t0<:Real`: Initial integration time.
+- `init::ElementsIC{T<:Real}`: Initial conditions of the system. See [`InitialConditions`](@ref).
 # Outputs
 - `x::Array{<:Real,2}`: Cartesian positions of each body.
 - `v::Array{<:Real,2}`: Cartesian velocites of each body.
-- `jac_init::Array{<:Real,2}`: (Optional; if init.der == true) Derivatives of A-matrix and x,v with respect to the masses of each object.
+- `jac_init::Array{<:Real,2}`: Derivatives of A-matrix and x,v with respect to the masses of each object.
 """
 function init_nbody(init::ElementsIC{T}) where T <: AbstractFloat
 
@@ -33,12 +32,11 @@ end
 Computes Kepler's problem for each pair of bodies in the system.
 
 # Arguments
-- `init::IC`: Initial conditions structure.
-- `t0<:Real`: Initial integration time.
+- `init::ElementsIC{T<:Real}`: Initial conditions structure.
 # Outputs
-- `rkepler::Array{<:Real,2}`: Matrix of initial position vectors for each keplerian.
-- `rdotkepler::Array{<:Real,2}`: Matrix of initial velocity vectors for each keplerian.
-- `jac_init::Array{<:Real,2}`: (Optional; if init.der == true) Derivatives of the A-matrix and cartesian positions and velocities with respect to the masses of each object.
+- `rkepler::Array{T<:Real,2}`: Matrix of initial position vectors for each keplerian.
+- `rdotkepler::Array{T<:Real,2}`: Matrix of initial velocity vectors for each keplerian.
+- `jac_init::Array{T<:Real,2}`: Derivatives of the A-matrix and cartesian positions and velocities with respect to the masses of each object.
 """
 function kepcalc(init::ElementsIC{T}) where T <: AbstractFloat
 
